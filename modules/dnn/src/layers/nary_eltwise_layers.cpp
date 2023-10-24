@@ -7,6 +7,7 @@
 #include "../op_cuda.hpp"
 #include "../op_cann.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_vkcom.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -114,6 +115,13 @@ public:
                     op == OPERATION::GREATER_EQUAL ||
                     op == OPERATION::LESS_EQUAL
             );
+
+#ifdef HAVE_VULKAN
+        if (backendId == DNN_BACKEND_VKCOM)
+            return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::SUB ||
+                   op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN;
+#endif
+
         if (op == OPERATION::MAX || op == OPERATION::MIN || op == OPERATION::SUM ||
             op == OPERATION::PROD || op == OPERATION::DIV || op == OPERATION::ADD)
             return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -923,6 +931,23 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));
     }
 #endif
+
+#ifdef HAVE_VULKAN
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                       std::vector<Ptr<BackendWrapper> > &outputs) CV_OVERRIDE
+    {
+        // does not support with bias; only 2d matmul
+        auto wrapper_Y = outputs[0].dynamicCast<VkComBackendWrapper>();
+        auto shape_Y = shape(*(wrapper_Y->getMat()));
+
+        auto wrapper_A = inputs[0].dynamicCast<VkComBackendWrapper>();
+        auto shape_A = shape(*wrapper_A->getMat());
+        std::vector<Mat> vkBlobs;
+        Ptr<vkcom::OpBase> op = (new vkcom::OpNary ((vkcom::OpNary::OPERATION) this->op)); //TODO(VK) revise initialization
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
+    }
+#endif
+
 };
 
 Ptr<NaryEltwiseLayer> NaryEltwiseLayer::create(const LayerParams& params)
