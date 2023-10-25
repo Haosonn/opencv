@@ -23,14 +23,10 @@
 layout(binding = 0) readonly buffer Input0{
     float image_data[];
 };
-layout(binding = 1) readonly buffer Input1 {
-    float weight_data[];
-};
-layout(binding = 2) writeonly buffer Output{
+layout(binding = 1) writeonly buffer Output{
     float outMat_data[];
 };
-
-layout(binding = 3) uniform pushBlock {
+layout(binding = 2) uniform pushBlock {
     int op;
 } p;
 

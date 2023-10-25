@@ -57,7 +57,6 @@ bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 
     destTypes = {
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // input
-            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // weight
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // out
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER  // param
     };
@@ -68,23 +67,16 @@ bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 
     VkCommandBuffer cmdBufferReal = cmdBuffer->get();
     desSet->writeTensor(ins[0], 0);
-
-    if (weightTensorPtr)
-        desSet->writeTensor(*weightTensorPtr, 1);
-    else
-    {
-        CV_Assert(ins.size() == 2);
-        desSet->writeTensor(ins[1], 1);
-    }
-
-    desSet->writeTensor(outs[0], 2);
-    desSet->writeTensor(paramTensor, 3); // TODO(vk) change the parameter from pushconstance to buffer.
+    desSet->writeTensor(outs[0], 1);
+    desSet->writeTensor(paramTensor, 2); // TODO(vk) change the parameter from pushconstance to buffer.
 
     cmdBuffer->beginRecord();
     pipeline->bind(cmdBufferReal, desSet->get());
+    group_x_ = group_y_ = group_z_ = 1; 
     vkCmdDispatch(cmdBufferReal, group_x_, group_y_, group_z_);
     cmdBuffer->endRecord();
 
+   
     cmdPoolPtr->submitAndWait(cmdBufferReal);
 
     return true;

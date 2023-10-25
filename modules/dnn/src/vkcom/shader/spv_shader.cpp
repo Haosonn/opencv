@@ -16,7 +16,7 @@ void initSPVMaps()
     SPVMaps.insert(std::make_pair("conv_depthwise_3x3_spv", std::make_pair(conv_depthwise_3x3_spv, 1977)));
     SPVMaps.insert(std::make_pair("conv_implicit_gemm_spv", std::make_pair(conv_implicit_gemm_spv, 3565)));
     SPVMaps.insert(std::make_pair("gemm_spv", std::make_pair(gemm_spv, 2902)));
-    SPVMaps.insert(std::make_pair("nary_eltwise_spv", std::make_pair(nary_eltwise_spv, 711)));
+    SPVMaps.insert(std::make_pair("nary_eltwise_spv", std::make_pair(nary_eltwise_spv, 660)));
 }
 
 }}} // namespace cv::dnn::vkcom
