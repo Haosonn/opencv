@@ -19,7 +19,7 @@ struct NaryShaderConfig
     int local_size_z;
 };
 
-// Current Vulkan Convolution layer only support Conv2D.
+
 class OpNary : public OpBase
 {
 public:

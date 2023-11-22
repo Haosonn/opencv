@@ -167,7 +167,7 @@ public:
         // * make all inputs and the output max_ndims-dimensional.
         // ** prepend dimension 1 to the mat of less dims
         // * compute proper step's
-        for (i = max_ndims-1; i >= 0; i-- ) {
+        for (i = max_ndims-1; i >= 0; i--) {
             for (k = 0; k < narrays; k++) {
                 j = ndims[k] - (max_ndims - i);
                 int sz_i = j >= 0 ? shape_[k][j] : 1;
@@ -936,12 +936,12 @@ public:
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
                                        std::vector<Ptr<BackendWrapper> > &outputs) CV_OVERRIDE
     {
-        // does not support with bias; only 2d matmul
-        auto wrapper_Y = outputs[0].dynamicCast<VkComBackendWrapper>();
-        auto shape_Y = shape(*(wrapper_Y->getMat()));
+        Ptr<VkComBackendWrapper> wrapper_Y = outputs[0].dynamicCast<VkComBackendWrapper>();
+        Ptr<VkComBackendWrapper> wrapper_A = inputs[0].dynamicCast<VkComBackendWrapper>();
+        
+        MatShape shape_Y = shape(*(wrapper_Y->getMat()));
+        MatShape shape_A = shape(*wrapper_A->getMat());
 
-        auto wrapper_A = inputs[0].dynamicCast<VkComBackendWrapper>();
-        auto shape_A = shape(*wrapper_A->getMat());
         std::vector<Mat> vkBlobs;
         Ptr<vkcom::OpBase> op = (new vkcom::OpNary ((vkcom::OpNary::OPERATION) this->op)); //TODO(VK) revise initialization
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
