@@ -1016,7 +1016,7 @@ public:
                                       shapes, steps))
             return Ptr<BackendNode>(); //TODO(VK) revise return for errors during broadcasting
             
-        Ptr<vkcom::OpBase> op = (new vkcom::OpNary((vkcom::OpNary::OPERATION) this->op, ninputs, max_ndims, shapes, steps)); //TODO(VK) revise initialization
+        Ptr<vkcom::OpBase> op = (new vkcom::OpNary((vkcom::OpNary::OPERATION) this->op, ninputs, max_ndims, shape_buf, step_buf)); //TODO(VK) revise initialization
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
     }
 #endif

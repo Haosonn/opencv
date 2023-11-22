@@ -13,18 +13,18 @@ namespace cv { namespace dnn { namespace vkcom {
 #define KSTRIP_LEN 32
 #define BLOCK_SIZE 64
 
-OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims, int** _shapes, size_t** _steps) : naryOpType(_naryOpType), ninputs(_ninputs), max_ndims(_max_ndims)
+OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims, int* _shapesBuf, size_t* _stepsBuf) : naryOpType(_naryOpType), ninputs(_ninputs), max_ndims(_max_ndims)
 {
     shapesBuf.resize((ninputs + 1) * max_ndims);
-    std::copy(_shapes, _shapes + ninputs + 1, shapesBuf.data());
+    std::copy(_shapesBuf, _shapesBuf + (ninputs + 1) * max_ndims, shapesBuf.data());
     stepsBuf.resize((ninputs + 1) * max_ndims);
-    std::copy(_steps, _steps + ninputs + 1, stepsBuf.data());
+    std::copy(_stepsBuf, _stepsBuf + (ninputs + 1) * max_ndims, stepsBuf.data());
 
     //TODO(VK) 
     shader_name = "nary_eltwise_spv";
     switch(naryOpType) {
         case OPERATION::ADD:
-            std::cout << "opencv/modules/dnn/src/vkcom/src/op_nary.cpp: VK nary-eltwise\n" << std::endl;
+            std::cout << "opencv/modules/dnn/src/vkcom/src/op_nary.cpp: on op ADD, VK nary-eltwise\n" << std::endl;
             break;
         //TODO(VK) add other cases
         default:
@@ -51,9 +51,11 @@ bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     firstForward();
 
     std::vector<int> param = {(int)naryOpType, ninputs, max_ndims};
-    Tensor paramTensor = Tensor(reinterpret_cast<const char *>(param.data()), std::vector<int>({(int)param.size()}), kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    Tensor shapeTensor = Tensor(reinterpret_cast<const char *>(shapes_buf.data()), std::vector<int>({max_ndims}), kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    Tensor stepTensor = Tensor(reinterpret_cast<const char *>(steps_buf.data()), std::vector<int>({max_ndims}), kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    std::vector<int> paramSize = {(int)param.size()};
+    std::vector<int> ndims = {max_ndims};
+    Tensor paramTensor = Tensor(reinterpret_cast<const char *>(param.data()), paramSize, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    Tensor shapeTensor = Tensor(reinterpret_cast<const char *>(shapesBuf.data()), ndims, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    Tensor stepTensor = Tensor(reinterpret_cast<const char *>(stepsBuf.data()), ndims, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     destTypes = {
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // input1
