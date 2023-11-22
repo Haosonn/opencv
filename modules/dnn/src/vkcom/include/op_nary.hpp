@@ -19,11 +19,12 @@ struct NaryShaderConfig
     int local_size_z;
 };
 
-// Current Vulkan Convolution layer only support Conv2D.
+
 class OpNary : public OpBase
 {
 public:
-    enum class OPERATION
+    // Copied from nary_eltwise_layers.cpp
+    enum class OPERATION 
     {
         AND = 0,
         EQUAL,
@@ -47,7 +48,7 @@ public:
         WHERE,
     };
 
-    OpNary(const OPERATION naryOpType);
+    OpNary(const OPERATION naryOpType, int** shapes, size_t** steps);
 
     void firstForward(); // Execute only in the first forward.
     virtual bool forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs) CV_OVERRIDE;

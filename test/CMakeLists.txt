@@ -3,7 +3,7 @@ project(test)
 set(SOURCES test.cpp)
 add_executable(${PROJECT_NAME} ${SOURCES})
 # use opencv debug version
-set(OpenCV_DIR "D:/opencv/build")
+set(OpenCV_DIR "../../build")
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 # add opencv lib

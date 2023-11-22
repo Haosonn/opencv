@@ -13,13 +13,13 @@ namespace cv { namespace dnn { namespace vkcom {
 #define KSTRIP_LEN 32
 #define BLOCK_SIZE 64
 
-OpNary::OpNary(const OpNary::OPERATION _naryOpType) : naryOpType(_naryOpType)
+OpNary::OpNary(const OpNary::OPERATION _naryOpType, int** _shapes, size_t** steps) : naryOpType(_naryOpType)
 {
-    // Convert Weight to GPU Tensor.
+    //TODO(VK) 
     shader_name = "nary_eltwise_spv";
     switch(naryOpType) {
         case OPERATION::ADD:
-            printf("op_nary.cpp: VULKAN NARY ELTWISE ADD\n");
+            std::cout << "opencv/modules/dnn/src/vkcom/src/op_nary.cpp: VK nary-eltwise\n" << std::endl;
             break;
         //TODO(VK) add other cases
         default:
@@ -33,7 +33,7 @@ void OpNary::firstForward()
     // TODO(VK) initialize first forward
     if (!firstForwardFinsh)
     {
-        firstForwardFinsh = true; //wrong spelling?
+        firstForwardFinsh = true;
     }
     else
         return;
@@ -42,6 +42,10 @@ void OpNary::firstForward()
 bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 {
     CV_Assert((ins.size() == 1 || ins.size() == 2) && outs.size() == 1);
+
+
+
+    
     Shape inputShape = ins[0].getShape();
     Shape outputShape = outs[0].getShape();
     CV_Assert(inputShape.size() == outputShape.size());

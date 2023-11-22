@@ -117,7 +117,7 @@ public:
             );
 
 #ifdef HAVE_VULKAN
-        if (backendId == DNN_BACKEND_VKCOM)
+        if (backendId == DNN_BACKEND_VKCOM) //TODO(VK) remember to add implemented operations
             return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::SUB ||
                    op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN;
 #endif
@@ -167,7 +167,7 @@ public:
         // * make all inputs and the output max_ndims-dimensional.
         // ** prepend dimension 1 to the mat of less dims
         // * compute proper step's
-        for (i = max_ndims-1; i >= 0; i-- ) {
+        for (i = max_ndims-1; i >= 0; i--) {
             for (k = 0; k < narrays; k++) {
                 j = ndims[k] - (max_ndims - i);
                 int sz_i = j >= 0 ? shape_[k][j] : 1;
@@ -936,14 +936,83 @@ public:
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
                                        std::vector<Ptr<BackendWrapper> > &outputs) CV_OVERRIDE
     {
-        // does not support with bias; only 2d matmul
-        auto wrapper_Y = outputs[0].dynamicCast<VkComBackendWrapper>();
-        auto shape_Y = shape(*(wrapper_Y->getMat()));
+        std::vector<Ptr<VkComBackendWrapper>> wrapper_inputs;
+        std::vector<MatShape> shapes_inputs;
+        std::transform(inputs.begin(), inputs.end(), std::back_inserter(wrapper_inputs), [] (const Ptr<BackendWrapper>& w) { return w.dynamicCast<VkComBackendWrapper>(); });
+        std::transform(wrapper_inputs.begin(), wrapper_inputs.end(), std::back_inserter(shapes_inputs), [] (const Ptr<VkComBackendWrapper>& w) { return shape(*(w->getMat())); });
+        auto wrapper_output = outputs[0].dynamicCast<VkComBackendWrapper>();
+        auto shape_output = shape(*(wrapper_output->getMat()));
+        std::vector<Mat> vkBlobs;      
+        
+        // collect all input
+        int ninputs = inputs.size();
+        std::vector<const char*> v_inp;
+        std::transform(wrapper_inputs.begin(), wrapper_inputs.end(), std::back_inserter(v_inp), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->template ptr<const char>(); });
+        const char** inp = v_inp.data();
 
-        auto wrapper_A = inputs[0].dynamicCast<VkComBackendWrapper>();
-        auto shape_A = shape(*wrapper_A->getMat());
-        std::vector<Mat> vkBlobs;
-        Ptr<vkcom::OpBase> op = (new vkcom::OpNary ((vkcom::OpNary::OPERATION) this->op)); //TODO(VK) revise initialization
+        // collect ndims of all input
+        std::vector<int> v_inp_dims;
+        std::transform(wrapper_inputs.begin(), wrapper_inputs.end(), std::back_inserter(v_inp_dims), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->dims; });
+        const int* inp_ndims = v_inp_dims.data();
+
+        // collect shapes of all input
+        std::vector<const int*> v_inp_shape;
+        std::transform(wrapper_inputs.begin(), wrapper_inputs.end(), std::back_inserter(v_inp_shape), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->size.p; });
+        const int** inp_shape = v_inp_shape.data();
+
+        // collect steps of all input
+        std::vector<const size_t*> v_inp_step;
+        std::transform(wrapper_inputs.begin(), wrapper_inputs.end(), std::back_inserter(v_inp_step), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->step.p; });
+        const size_t** inp_step = v_inp_step.data();
+
+        // collect info of output (ndims, shape, step)
+        char* out = wrapper_output->getMat()->ptr<char>();
+        int out_ndims = wrapper_output->getMat()->dims;
+        const int* out_shape = wrapper_output->getMat()->size.p;
+        const size_t* out_step = wrapper_output->getMat()->step.p;
+
+        // find max ndims for broadcasting
+        int i, max_ndims = out_ndims > 2 ? out_ndims : 2;
+        for(i = 0; i < ninputs; i++)
+            max_ndims = max_ndims > inp_ndims[i] ? max_ndims : inp_ndims[i];
+
+        // buf holds the following buffers for inputs & output:
+        //  * orig_shapes, shapes (result_shape), orig_steps, steps (result_step), (ninputs+1)*4 elements in total
+        //  * ptrs, (ninputs+1)*1 elements in total
+        //  * shape_buf & step_buf, (ninputs+1)*2*max_ndims elements in total
+        //  * all_ndims, (ninputs+1)*1 elements in total
+        //  * all_type_sizes, (ninputs+1)*1 elements in total
+        AutoBuffer<size_t> buf((ninputs + 1) * (2 * max_ndims + 7));
+
+        int** orig_shapes = (int**)buf.data();
+        int** shapes = orig_shapes + ninputs + 1;
+        size_t** orig_steps = (size_t**)(shapes + ninputs + 1);
+        size_t** steps = orig_steps + ninputs + 1;
+
+        char** ptrs = (char**)(steps + ninputs + 1);
+
+        size_t* step_buf = (size_t*)(ptrs + ninputs + 1);
+        int* shape_buf = (int*)(step_buf + (ninputs + 1)*max_ndims);
+
+        int* all_ndims = shape_buf + (ninputs + 1)*max_ndims;
+        size_t* all_type_sizes = (size_t*)(all_ndims + ninputs + 1);
+
+        for(i = 0; i <= ninputs; i++) {
+            all_ndims[i] = i == 0 ? out_ndims : inp_ndims[i-1];
+            all_type_sizes[i] = i == 0 ? wrapper_output->getMat()->elemSize() : wrapper_inputs[i-1]->getMat()->elemSize();
+            orig_shapes[i] = (int*)(i == 0 ? out_shape : inp_shape ? inp_shape[i-1] : 0);
+            orig_steps[i] = (size_t*)(i == 0 ? out_step : inp_step ? inp_step[i-1] : 0);
+            shapes[i] = shape_buf + max_ndims*i;
+            steps[i] = step_buf + max_ndims*i;
+        }
+
+        if (!prepare_for_broadcast_op(ninputs + 1, max_ndims, all_type_sizes,
+                                      all_ndims, (const int**)orig_shapes,
+                                      (const size_t**)orig_steps,
+                                      shapes, steps))
+            return Ptr<BackendNode>(); //TODO(VK) revise return for errors during broadcasting
+            
+        Ptr<vkcom::OpBase> op = (new vkcom::OpNary((vkcom::OpNary::OPERATION) this->op, shapes, steps)); //TODO(VK) revise initialization
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
     }
 #endif

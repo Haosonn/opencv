@@ -60,9 +60,9 @@ const int WHERE = 19;
 void nary_add()
 {
     //TODO(VK) finish nary_add here 
-    
-
 }
+
+
 void main()
 {
     int mIndex = int(gl_WorkGroupID.x) * BLOCK_SIZE;
@@ -77,14 +77,11 @@ void main()
     int b_local_x = int(gl_LocalInvocationID.x) % BLOCK_SIZE; // 256 / 64 = 4
     int b_local_y = int(gl_LocalInvocationID.x) / BLOCK_SIZE;
 
-
-    return;
     switch (p.op)
     {
         case int(ADD):
-            // print out the op in vulkan
-            // printf("ADD\n");
             nary_add();
             break;
     }
+    return;
 }
