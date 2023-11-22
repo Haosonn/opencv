@@ -936,40 +936,44 @@ public:
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
                                        std::vector<Ptr<BackendWrapper> > &outputs) CV_OVERRIDE
     {
-        std::vector<Ptr<VkComBackendWrapper>> wrapper_inputs;
-        std::vector<MatShape> shapes_inputs;
-        std::transform(inputs.begin(), inputs.end(), std::back_inserter(wrapper_inputs), [] (const Ptr<BackendWrapper>& w) { return w.dynamicCast<VkComBackendWrapper>(); });
-        std::transform(wrapper_inputs.begin(), wrapper_inputs.end(), std::back_inserter(shapes_inputs), [] (const Ptr<VkComBackendWrapper>& w) { return shape(*(w->getMat())); });
-        auto wrapper_output = outputs[0].dynamicCast<VkComBackendWrapper>();
-        auto shape_output = shape(*(wrapper_output->getMat()));
-        std::vector<Mat> vkBlobs;      
+        std::vector<Ptr<VkComBackendWrapper>> inputWrappers;
+        std::vector<MatShape> inputShapes;
+        std::transform(inputs.begin(), inputs.end(), std::back_inserter(inputWrappers), [] (const Ptr<BackendWrapper>& w) { return w.dynamicCast<VkComBackendWrapper>(); });
+        for (auto &ptr: inputWrappers) {
+            CV_Assert(ptr);
+        }
+        std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(inputShapes), [] (const Ptr<VkComBackendWrapper>& w) { return shape(*(w->getMat())); });
+        auto outputWrap = outputs[0].dynamicCast<VkComBackendWrapper>();
+        CV_Assert(outputWrap);
+        auto outputShape = shape(*(outputWrap->getMat()));
+        std::vector<Mat> vkBlobs; // TODO(vk) what
         
         // collect all input
         int ninputs = inputs.size();
         std::vector<const char*> v_inp;
-        std::transform(wrapper_inputs.begin(), wrapper_inputs.end(), std::back_inserter(v_inp), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->template ptr<const char>(); });
+        std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(v_inp), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->template ptr<const char>(); });
         const char** inp = v_inp.data();
 
         // collect ndims of all input
         std::vector<int> v_inp_dims;
-        std::transform(wrapper_inputs.begin(), wrapper_inputs.end(), std::back_inserter(v_inp_dims), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->dims; });
+        std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(v_inp_dims), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->dims; });
         const int* inp_ndims = v_inp_dims.data();
 
         // collect shapes of all input
         std::vector<const int*> v_inp_shape;
-        std::transform(wrapper_inputs.begin(), wrapper_inputs.end(), std::back_inserter(v_inp_shape), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->size.p; });
+        std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(v_inp_shape), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->size.p; });
         const int** inp_shape = v_inp_shape.data();
 
         // collect steps of all input
         std::vector<const size_t*> v_inp_step;
-        std::transform(wrapper_inputs.begin(), wrapper_inputs.end(), std::back_inserter(v_inp_step), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->step.p; });
+        std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(v_inp_step), [] (const Ptr<VkComBackendWrapper> &w) { return (w->getMat())->step.p; });
         const size_t** inp_step = v_inp_step.data();
 
         // collect info of output (ndims, shape, step)
-        char* out = wrapper_output->getMat()->ptr<char>();
-        int out_ndims = wrapper_output->getMat()->dims;
-        const int* out_shape = wrapper_output->getMat()->size.p;
-        const size_t* out_step = wrapper_output->getMat()->step.p;
+        char* out = outputWrap->getMat()->ptr<char>();
+        int out_ndims = outputWrap->getMat()->dims;
+        const int* out_shape = outputWrap->getMat()->size.p;
+        const size_t* out_step = outputWrap->getMat()->step.p;
 
         // find max ndims for broadcasting
         int i, max_ndims = out_ndims > 2 ? out_ndims : 2;
@@ -999,7 +1003,7 @@ public:
 
         for(i = 0; i <= ninputs; i++) {
             all_ndims[i] = i == 0 ? out_ndims : inp_ndims[i-1];
-            all_type_sizes[i] = i == 0 ? wrapper_output->getMat()->elemSize() : wrapper_inputs[i-1]->getMat()->elemSize();
+            all_type_sizes[i] = i == 0 ? outputWrap->getMat()->elemSize() : inputWrappers[i-1]->getMat()->elemSize();
             orig_shapes[i] = (int*)(i == 0 ? out_shape : inp_shape ? inp_shape[i-1] : 0);
             orig_steps[i] = (size_t*)(i == 0 ? out_step : inp_step ? inp_step[i-1] : 0);
             shapes[i] = shape_buf + max_ndims*i;
@@ -1012,7 +1016,7 @@ public:
                                       shapes, steps))
             return Ptr<BackendNode>(); //TODO(VK) revise return for errors during broadcasting
             
-        Ptr<vkcom::OpBase> op = (new vkcom::OpNary((vkcom::OpNary::OPERATION) this->op, ninputs, max_ndims, shapes, steps)); 
+        Ptr<vkcom::OpBase> op = (new vkcom::OpNary((vkcom::OpNary::OPERATION) this->op, ninputs, max_ndims, shapes, steps)); //TODO(VK) revise initialization
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
     }
 #endif

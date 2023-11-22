@@ -13,14 +13,14 @@ namespace cv { namespace dnn { namespace vkcom {
 #define KSTRIP_LEN 32
 #define BLOCK_SIZE 64
 
-OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims, int** _shapes, size_t** _steps) 
-    : naryOpType(_naryOpType), ninputs(_ninputs), max_ndims(_max_ndims)
+OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims, int** _shapes, size_t** _steps) : naryOpType(_naryOpType), ninputs(_ninputs), max_ndims(_max_ndims)
 {
-    //  * shape_buf & step_buf, (ninputs+1)*2*max_ndims elements in total
-    shapes_buf = AutoBuffer<int>((ninputs + 1) * 2 * max_ndims);
-    steps_buf = AutoBuffer<size_t>((ninputs + 1) * 2 * max_ndims);
-    memcpy(shapes_buf.data(), _shapes, (ninputs + 1) * 2 * max_ndims * sizeof(int));
-    memcpy(steps_buf.data(), _steps, (ninputs + 1) * 2 * max_ndims * sizeof(size_t));
+    shapesBuf.resize((ninputs + 1) * max_ndims);
+    std::copy(_shapes, _shapes + ninputs + 1, shapesBuf.data());
+    stepsBuf.resize((ninputs + 1) * max_ndims);
+    std::copy(_steps, _steps + ninputs + 1, stepsBuf.data());
+
+    //TODO(VK) 
     shader_name = "nary_eltwise_spv";
     switch(naryOpType) {
         case OPERATION::ADD:
