@@ -22,6 +22,18 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
     stepsBuf.resize((ninputs + 1) * max_ndims);
     std::transform(_stepsBuf, _stepsBuf + (ninputs + 1) * max_ndims, stepsBuf.data(), [](size_t x) { return static_cast<int32_t>(x); });
 
+    // TODO(VK): delete them
+    std::cout << "ShapesBuf:\n";
+    for (size_t i = 0; i < (ninputs + 1) * max_ndims; ++i)
+    {
+        std::cout << _shapesBuf[i] << "\n";
+    }
+
+    std::cout << "StepsBuf:\n";
+    for (size_t i = 0; i < (ninputs + 1) * max_ndims; ++i)
+    {
+        std::cout << _stepsBuf[i] << "\n";
+    }
 
     //TODO(VK) 
     switch(naryOpType) {
@@ -121,6 +133,10 @@ bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     {
         CV_Assert(tensor.getFormat() == kFormatFp32);
     }
+
+    group_x_ = 1;
+    group_y_ = 1;
+    group_z_ = 1;
 
     switch(naryShaderType) {
         case kNaryShaderTypeBinary: {

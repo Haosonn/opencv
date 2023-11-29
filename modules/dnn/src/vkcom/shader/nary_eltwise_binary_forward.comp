@@ -97,7 +97,8 @@ void binary_add()
         for (int i2 = 0; i2 < n2; ++i2,
                                   ptr1 += matStep[2 * ndims - 2], 
                                   ptr2 += matStep[3 * ndims - 2], 
-                                  ptr += matStep[ndims - 2]) {
+                                  ptr += matStep[ndims - 2]) 
+        {
             if (dp1 == 1 && dp2 == 1 && dp == 1) {
                 for (int i1 = 0; i1 < n1; ++i1) {
                     matOut[ptr + i1] = matA[ptr1 + i1] + matB[ptr2 + i1];
@@ -123,29 +124,25 @@ void binary_add()
 
 void main()
 {
-    matOut[0] = 1;
-    matOut[1] = 1;
-    matOut[2] = 1;
-    matOut[3] = 1;
-    // debugPrintfEXT("nary_eltwise_binary_forward.comp loaded\n");
-    // int mIndex = int(gl_WorkGroupID.x) * BLOCK_SIZE;
-    // int nIndex = int(gl_WorkGroupID.y) * BLOCK_SIZE;
+    debugPrintfEXT("nary_eltwise_binary_forward.comp loaded\n");
+    int mIndex = int(gl_WorkGroupID.x) * BLOCK_SIZE;
+    int nIndex = int(gl_WorkGroupID.y) * BLOCK_SIZE;
 
-    // int local_x = int(gl_LocalInvocationID.x) % 16; // 0~7
-    // int local_y = int(gl_LocalInvocationID.x) / 16; // 0~31
+    int local_x = int(gl_LocalInvocationID.x) % 16; // 0~7
+    int local_y = int(gl_LocalInvocationID.x) / 16; // 0~31
 
-    // int a_local_x = int(gl_LocalInvocationID.x) % KSTRIP_LEN; // 256 / 32 = 8
-    // int a_local_y = int(gl_LocalInvocationID.x) / KSTRIP_LEN;
+    int a_local_x = int(gl_LocalInvocationID.x) % KSTRIP_LEN; // 256 / 32 = 8
+    int a_local_y = int(gl_LocalInvocationID.x) / KSTRIP_LEN;
 
-    // int b_local_x = int(gl_LocalInvocationID.x) % BLOCK_SIZE; // 256 / 64 = 4
-    // int b_local_y = int(gl_LocalInvocationID.x) / BLOCK_SIZE;
+    int b_local_x = int(gl_LocalInvocationID.x) % BLOCK_SIZE; // 256 / 64 = 4
+    int b_local_y = int(gl_LocalInvocationID.x) / BLOCK_SIZE;
 
-    // switch (params.opType)
-    // {
-    //     case int(ADD):
-    //         binary_add();
-    //         break;
-    // }
+    switch (params.opType)
+    {
+        case int(ADD):
+            binary_add();
+            break;
+    }
 
     return;
 }

@@ -8,8 +8,8 @@ int main() {
     dnn::Net net = dnn::Net();
     net.setPreferableBackend(dnn::DNN_BACKEND_VKCOM);
     net.setPreferableTarget(dnn::DNN_TARGET_VULKAN);
-    Mat input1 = Mat::ones(2, 2, CV_32F);
-    Mat input2 = Mat::ones(2, 2, CV_32F);
+    Mat input1 = Mat::ones(3, 2, CV_32F);
+    Mat input2 = Mat::ones(3, 2, CV_32F);
     Mat output;
     dnn::LayerParams params = dnn::LayerParams();
     params.name = "NaryEltwise";
