@@ -12,6 +12,14 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
+enum NaryShaderType
+{
+    kNaryShaderTypeBinary,
+    kNaryShaderTypeTrinary,
+    kNaryShaderTypeNary,
+    kNaryShaderTest,
+};
+
 struct NaryShaderConfig
 {
     int local_size_x;
@@ -54,11 +62,16 @@ public:
     virtual bool forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs) CV_OVERRIDE;
     Ptr<Tensor> weightTensorPtr;
 private:
+    bool binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs);
+    bool trinaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs);
+    bool naryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs);
+
     const OPERATION naryOpType;
+    NaryShaderType naryShaderType;
     int ninputs;
     int max_ndims;
-    AutoBuffer<int> shapesBuf;
-    AutoBuffer<size_t> stepsBuf;
+    AutoBuffer<int32_t> shapesBuf;
+    AutoBuffer<int32_t> stepsBuf;
     bool firstForwardFinsh = false;
 };
 

@@ -22,15 +22,16 @@ int main() {
     net.connect(0, 0, 1, 0);
     net.connect(0, 1, 1, 1);
     vector<String> layerNames = net.getLayerNames();
+    cout << "Input: " << net.getLayer(0)->name << endl;
     for (auto i : layerNames) {
-        cout << "layer name: " << i << endl;
-        auto v = net.getLayerInputs(net.getLayerId(i));
+        int id = net.getLayerId(i);
+        cout << "layer name: " << i << ", id=" << id << endl;
+        auto v = net.getLayerInputs(id);
         cout << "  input layer: " << endl;
         for (auto j : v) {
             cout << "    " << j->name << endl;
         }
     }
-    
     output = net.forward();
     cout << output << endl;
     return 0;
