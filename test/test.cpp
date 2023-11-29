@@ -10,6 +10,8 @@ int main() {
     net.setPreferableTarget(dnn::DNN_TARGET_VULKAN);
     Mat input1 = Mat::ones(3, 2, CV_32F);
     Mat input2 = Mat::ones(3, 2, CV_32F);
+    input2.at<float>(1, 0) = 3;
+    input2.at<float>(2, 1) = 7;
     Mat output;
     dnn::LayerParams params = dnn::LayerParams();
     params.name = "NaryEltwise";

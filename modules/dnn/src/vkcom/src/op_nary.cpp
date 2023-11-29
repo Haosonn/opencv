@@ -22,18 +22,6 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
     stepsBuf.resize((ninputs + 1) * max_ndims);
     std::transform(_stepsBuf, _stepsBuf + (ninputs + 1) * max_ndims, stepsBuf.data(), [](size_t x) { return static_cast<int32_t>(x); });
 
-    // TODO(VK): delete them
-    std::cout << "ShapesBuf:\n";
-    for (size_t i = 0; i < (ninputs + 1) * max_ndims; ++i)
-    {
-        std::cout << _shapesBuf[i] << "\n";
-    }
-
-    std::cout << "StepsBuf:\n";
-    for (size_t i = 0; i < (ninputs + 1) * max_ndims; ++i)
-    {
-        std::cout << _stepsBuf[i] << "\n";
-    }
 
     //TODO(VK) 
     switch(naryOpType) {
@@ -82,9 +70,15 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     std::vector<int32_t> param = {(int32_t)naryOpType, ninputs, max_ndims};
     std::vector<int32_t> paramSize = {(int32_t)param.size()};
     std::vector<int32_t> dimSizes = {(ninputs + 1) * max_ndims};
+    std::vector<int32_t> actualSteps;
+
+    // TODO(VK): compute step for different dtype. Currently this is for kFormatFp32.
+    actualSteps.resize(stepsBuf.size());
+    std::transform(stepsBuf.data(), stepsBuf.data() + dimSizes[0], actualSteps.begin(), [](int32_t sz){ return sz / 4; });
+
     Tensor paramTensor = Tensor(reinterpret_cast<const char *>(param.data()), paramSize, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     Tensor shapeTensor = Tensor(reinterpret_cast<const char *>(shapesBuf.data()), dimSizes, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    Tensor stepTensor = Tensor(reinterpret_cast<const char *>(stepsBuf.data()), dimSizes, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    Tensor stepTensor = Tensor(reinterpret_cast<const char *>(actualSteps.data()), dimSizes, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
     destTypes = {
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // input1
@@ -124,7 +118,7 @@ bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 
     firstForward();
 
-    // TODO(VK): Support more dtypes
+    // TODO(VK): Support more dtypes. Currently only kFormatFp32 is supported.
     for (auto &tensor: ins)
     {
         CV_Assert(tensor.getFormat() == kFormatFp32);
