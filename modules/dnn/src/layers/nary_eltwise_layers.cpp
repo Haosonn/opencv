@@ -939,7 +939,7 @@ public:
         std::vector<Ptr<VkComBackendWrapper>> inputWrappers;
         std::vector<MatShape> inputShapes;
         std::transform(inputs.begin(), inputs.end(), std::back_inserter(inputWrappers), [] (const Ptr<BackendWrapper>& w) { return w.dynamicCast<VkComBackendWrapper>(); });
-        for (auto &ptr: inputWrappers) {
+        for (const auto &ptr: inputWrappers) {
             CV_Assert(ptr);
         }
         std::transform(inputWrappers.begin(), inputWrappers.end(), std::back_inserter(inputShapes), [] (const Ptr<VkComBackendWrapper>& w) { return shape(*(w->getMat())); });

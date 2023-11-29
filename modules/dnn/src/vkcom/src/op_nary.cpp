@@ -13,7 +13,7 @@ namespace cv { namespace dnn { namespace vkcom {
 #define KSTRIP_LEN 32
 #define BLOCK_SIZE 64
 
-OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims, int* _shapesBuf, size_t* _stepsBuf) : naryOpType(_naryOpType), ninputs(_ninputs), max_ndims(_max_ndims)
+OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims, const int* _shapesBuf, const size_t* _stepsBuf) : naryOpType(_naryOpType), ninputs(_ninputs), max_ndims(_max_ndims)
 {
     shapesBuf.resize((ninputs + 1) * max_ndims);
     std::copy(_shapesBuf, _shapesBuf + (ninputs + 1) * max_ndims, shapesBuf.data());

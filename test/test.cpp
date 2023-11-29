@@ -25,12 +25,12 @@ int main() {
     for (auto i : layerNames) {
         cout << "layer name: " << i << endl;
         auto v = net.getLayerInputs(net.getLayerId(i));
-        cout << "input layer: " << endl;
+        cout << "  input layer: " << endl;
         for (auto j : v) {
-            cout << j->name << endl;
+            cout << "    " << j->name << endl;
         }
-        cout << endl;
     }
+    
     output = net.forward();
     cout << output << endl;
     return 0;
