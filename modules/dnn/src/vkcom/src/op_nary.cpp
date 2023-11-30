@@ -47,6 +47,24 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
             shader_name = "nary_eltwise_binary_forward_spv";
             break;
         }
+        case OPERATION::WHERE:
+        {
+            CV_Assert(ninputs == 3);
+            CV_Assert(max_ndims >= 2);
+            naryShaderType = kNaryShaderTypeTrinary;
+            shader_name = "nary_eltwise_trinary_forward_spv";
+            break;
+        }
+        // case OPERATION::MAX:
+        // case OPERATION::MEAN:
+        // case OPERATION::MIN:
+        case OPERATION::SUM:
+        {
+            CV_Assert(max_ndims >= 2);
+            naryShaderType = kNaryShaderTypeNary;
+            shader_name = "nary_eltwise_nary_forward_spv";
+            break;
+        }
         //TODO(VK) add other cases
         default:
             CV_Error(Error::StsNotImplemented, "Unsupported nary operation type");
@@ -128,13 +146,9 @@ bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
         CV_Assert(tensor.getFormat() == kFormatFp32);
     }
 
-    group_x_ = 1;
-    group_y_ = 1;
-    group_z_ = 1;
-
     switch(naryShaderType) {
         case kNaryShaderTypeBinary: {
-            std::cout << "Dispatched binary operation.\n"; // TODO(VK): delete this
+            // std::cout << "Dispatched binary operation.\n"; // TODO(VK): delete this
             return binaryForward(ins, outs);
             break;
         }
