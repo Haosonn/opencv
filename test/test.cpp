@@ -63,6 +63,7 @@ void cal(Mat &input1, Mat &input2, Mat &output, dnn::Net& net) {
     net.setInput(input2, "input2");
 
     auto begin = std::chrono::high_resolution_clock::now();
+    CV_LOG_DEBUG(NULL, "start forwarding");
 
     output = net.forward();
 
