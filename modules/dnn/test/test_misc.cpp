@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
+#include "npy_blob.hpp"
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/opencl/ocl_defs.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
@@ -90,6 +91,39 @@ TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
             EXPECT_NEAR(hwPtr[3], targetVec[3], 1e-5);
         }
     }
+}
+
+TEST(blobFromImageWithParams_CustomPadding, letter_box)
+{
+    Mat img(40, 20, CV_8UC4, Scalar(0, 1, 2, 3));
+
+    // Custom padding value that you have added
+    Scalar customPaddingValue(5, 6, 7, 8); // Example padding value
+
+    Size targetSize(20, 20);
+
+    Mat targetImg = img.clone();
+
+    cv::copyMakeBorder(
+        targetImg, targetImg, 0, 0,
+        targetSize.width / 2,
+        targetSize.width / 2,
+        BORDER_CONSTANT,
+        customPaddingValue);
+
+    // Set up Image2BlobParams with your new functionality
+    Image2BlobParams param;
+    param.size = targetSize;
+    param.paddingmode = DNN_PMODE_LETTERBOX;
+    param.borderValue = customPaddingValue; // Use your new feature here
+
+    // Create blob with custom padding
+    Mat blob = dnn::blobFromImageWithParams(img, param);
+
+    // Create target blob for comparison
+    Mat targetBlob = dnn::blobFromImage(targetImg, 1.0, targetSize);
+
+    EXPECT_EQ(0, cvtest::norm(targetBlob, blob, NORM_INF));
 }
 
 TEST(blobFromImageWithParams_4ch, letter_box)
@@ -869,6 +903,35 @@ TEST_P(Test_Model_Optimizer, flexible_inputs)
     net1.setInput(input0);
     out = net1.forward();
     normAssert(ref, out, 0, 0);
+}
+
+TEST_P(Test_Model_Optimizer, readONNX)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
+
+    const std::string& model = findDataFile("dnn/onnx/models/convolution.onnx");
+
+    std::vector<Net> nets = {
+        // Old API
+        readNetFromModelOptimizer(model, ""),
+        readNet("", model, "dldt"),
+        // New API
+        readNetFromModelOptimizer(model),
+        readNet(model, "", "openvino")
+    };
+
+    Mat inp = blobFromNPY(findDataFile("dnn/onnx/data/input_convolution.npy"));
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_convolution.npy"));
+
+    for (int i = 0; i < nets.size(); ++i) {
+        nets[i].setPreferableTarget(targetId);
+        nets[i].setInput(inp);
+        Mat out = nets[i].forward();
+        normAssert(out, ref, format("Index: %d", i).c_str());
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model_Optimizer,

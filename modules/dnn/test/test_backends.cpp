@@ -49,7 +49,10 @@ public:
         net.setInput(inp);
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
-        net.enableWinograd(useWinograd);
+
+        if (target == DNN_TARGET_CPU_FP16)
+            net.enableWinograd(false);
+
         if (backend == DNN_BACKEND_HALIDE && !halideScheduler.empty())
         {
             halideScheduler = findDataFile(halideScheduler);
@@ -531,7 +534,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     Mat img = imread(findDataFile("dnn/googlenet_1.png"));
     Mat inp = blobFromImage(img, 1.0, Size(320, 240), Scalar(103.939, 116.779, 123.68), false, false);
     // Output image has values in range [-143.526, 148.539].
-    float l1 = 2e-4, lInf = 2e-3;
+    float l1 = 2e-4, lInf = 2.4e-3;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.4;
@@ -545,7 +548,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     else if (target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.4;
-        lInf = 19.;
+        lInf = 22.;
     }
     else if (target == DNN_TARGET_VULKAN)
     {

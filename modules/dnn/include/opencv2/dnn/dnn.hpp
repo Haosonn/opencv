@@ -1021,14 +1021,14 @@ CV__DNN_INLINE_NS_BEGIN
       *                  * `*.pb` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.t7` | `*.net` (Torch, http://torch.ch/)
       *                  * `*.weights` (Darknet, https://pjreddie.com/darknet/)
-      *                  * `*.bin` (DLDT, https://software.intel.com/openvino-toolkit)
+      *                  * `*.bin` | `*.onnx` (OpenVINO, https://software.intel.com/openvino-toolkit)
       *                  * `*.onnx` (ONNX, https://onnx.ai/)
       * @param[in] config Text file contains network configuration. It could be a
       *                   file with the following extensions:
       *                  * `*.prototxt` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pbtxt` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.cfg` (Darknet, https://pjreddie.com/darknet/)
-      *                  * `*.xml` (DLDT, https://software.intel.com/openvino-toolkit)
+      *                  * `*.xml` (OpenVINO, https://software.intel.com/openvino-toolkit)
       * @param[in] framework Explicit framework name tag to determine a format.
       * @returns Net object.
       *
@@ -1064,7 +1064,7 @@ CV__DNN_INLINE_NS_BEGIN
      *  backend.
      */
     CV_EXPORTS_W
-    Net readNetFromModelOptimizer(const String &xml, const String &bin);
+    Net readNetFromModelOptimizer(const String &xml, const String &bin = "");
 
     /** @brief Load a network from Intel's Model Optimizer intermediate representation.
      *  @param[in] bufferModelConfig Buffer contains XML configuration with network's topology.
@@ -1212,7 +1212,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP Image2BlobParams();
         CV_WRAP Image2BlobParams(const Scalar& scalefactor, const Size& size = Size(), const Scalar& mean = Scalar(),
                             bool swapRB = false, int ddepth = CV_32F, DataLayout datalayout = DNN_LAYOUT_NCHW,
-                            ImagePaddingMode mode = DNN_PMODE_NULL);
+                            ImagePaddingMode mode = DNN_PMODE_NULL, Scalar borderValue = 0.0);
 
         CV_PROP_RW Scalar scalefactor; //!< scalefactor multiplier for input image values.
         CV_PROP_RW Size size;    //!< Spatial size for output image.
@@ -1221,6 +1221,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW int ddepth;   //!< Depth of output blob. Choose CV_32F or CV_8U.
         CV_PROP_RW DataLayout datalayout; //!< Order of output dimensions. Choose DNN_LAYOUT_NCHW or DNN_LAYOUT_NHWC.
         CV_PROP_RW ImagePaddingMode paddingmode;   //!< Image padding mode. @see ImagePaddingMode.
+        CV_PROP_RW Scalar borderValue;   //!< Value used in padding mode for padding.
     };
 
     /** @brief Creates 4-dimensional blob from image with given params.
@@ -1457,6 +1458,9 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP Model& setPreferableBackend(dnn::Backend backendId);
          /// @sa Net::setPreferableTarget
          CV_WRAP Model& setPreferableTarget(dnn::Target targetId);
+
+         /// @sa Net::enableWinograd
+         CV_WRAP Model& enableWinograd(bool useWinograd);
 
          CV_DEPRECATED_EXTERNAL
          operator Net&() const { return getNetwork_(); }

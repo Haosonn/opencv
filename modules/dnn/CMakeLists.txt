@@ -6,9 +6,9 @@ set(the_description "Deep neural network module. It allows to load models from d
 
 ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX)
 ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX LASX)
-ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_depthwise" AVX AVX2 RVV LASX)
-ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2 NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX2 NEON LASX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
@@ -240,6 +240,12 @@ ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
 
+if(NOT BUILD_PROTOBUF)
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "OPENCV_DNN_EXTERNAL_PROTOBUF=1")
+  endif()
+endif()
+
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
 file(GLOB_RECURSE perf_hdrs "${perf_path}/*.hpp" "${perf_path}/*.h")
@@ -292,6 +298,13 @@ ocv_option(OPENCV_TEST_DNN_CANN "Build test with CANN" (TARGET ocv.3rdparty.cann
 if(TARGET ocv.3rdparty.cann AND OPENCV_TEST_DNN_CANN)
   if(TARGET opencv_test_dnn)
     ocv_target_link_libraries(opencv_test_dnn ocv.3rdparty.cann)
+  endif()
+endif()
+
+ocv_option(OPENCV_TEST_DNN_TIMVX "Build test with TIM-VX" (HAVE_TIMVX))
+if(OPENCV_TEST_DNN_TIMVX)
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "HAVE_TIMVX=1")
   endif()
 endif()
 
