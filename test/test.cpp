@@ -1,4 +1,5 @@
 #include <opencv2/core.hpp>
+#include <opencv2/core/utils/logger.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include <iostream>
 #include <chrono>
@@ -60,16 +61,32 @@ void printMat(const cv::Mat& mat) {
 void cal(Mat &input1, Mat &input2, Mat &output, dnn::Net& net) {
     net.setInput(input1, "input1");
     net.setInput(input2, "input2");
+
+    auto begin = std::chrono::high_resolution_clock::now();
+
     output = net.forward();
-    cout << "input1: " << endl;
-    printMat(input1);
-    cout << "input2: " << endl;
-    printMat(input2);
-    cout << "output: " << endl;
-    printMat(output);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "Time elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\n";
+}
+
+void testSingle(Mat &input1, Mat &input2, dnn::Net& net, bool print = false)
+{
+    Mat output;
+    cal(input1, input2, output, net);
+    if (print)
+    {
+        cout << "input1: " << endl;
+        printMat(input1);
+        cout << "input2: " << endl;
+        printMat(input2);
+        cout << "output: " << endl;
+            printMat(output);
+    }
 }
 
 int main() {
+    cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_DEBUG);
     dnn::Net net = dnn::Net();
     net.setPreferableBackend(dnn::DNN_BACKEND_VKCOM);
     net.setPreferableTarget(dnn::DNN_TARGET_VULKAN);
@@ -82,30 +99,38 @@ int main() {
     net.connect(0, 0, 1, 0);
     net.connect(0, 1, 1, 1);
 
-    Mat input1 = Mat::ones(3, 2, CV_32F);
-    Mat input2 = Mat::ones(3, 2, CV_32F);
-    Mat output;
+    int matDimH = 16384, matDimW = 16384;
+    Mat input1 = Mat::ones(matDimH, matDimW, CV_32F);
+    Mat input2 = Mat::ones(matDimH, matDimW, CV_32F);
 
-    cal(input1, input2, output, net);
+    net.setPreferableBackend(dnn::DNN_BACKEND_VKCOM);
+    net.setPreferableTarget(dnn::DNN_TARGET_VULKAN);
+    cout << "Using Vulkan.\n";
+    testSingle(input1, input2, net);
 
-    input1 = Mat::ones(3, 2, CV_32F);
-    input2 = Mat::ones(3, 1, CV_32F);
-    input2.at<float>(0, 0) = 2;
-    cal(input1, input2, output, net);
+    net.setPreferableBackend(dnn::DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(dnn::DNN_TARGET_CPU);
+    cout << "Using Vulkan.\n";
+    testSingle(input1, input2, net);
 
-    input1 = Mat::ones(3, 1, CV_32F);
-    input2 = Mat::ones(1, 3, CV_32F);
-    input2.at<float>(0, 0) = 2;
-    cal(input1, input2, output, net);
+    // input1 = Mat::ones(3, 2, CV_32F);
+    // input2 = Mat::ones(3, 1, CV_32F);
+    // input2.at<float>(0, 0) = 2;
+    // cal(input1, input2, output, net);
+
+    // input1 = Mat::ones(3, 1, CV_32F);
+    // input2 = Mat::ones(1, 3, CV_32F);
+    // input2.at<float>(0, 0) = 2;
+    // cal(input1, input2, output, net);
 
     // generate a mat with 4 dims
-    input1 = Mat::ones(4, vector<int>{3, 2, 2, 2}.data(), CV_32F);
-    input2 = Mat::ones(2, 2, CV_32F);
-    input2.at<float>(0, 0) = 1;
-    input2.at<float>(0, 1) = 2;
-    input2.at<float>(1, 0) = 3;
-    input2.at<float>(1, 1) = 4;
-    cal(input1, input2, output, net);
+    // input1 = Mat::ones(4, vector<int>{3, 2, 2, 2}.data(), CV_32F);
+    // input2 = Mat::ones(2, 2, CV_32F);
+    // input2.at<float>(0, 0) = 1;
+    // input2.at<float>(0, 1) = 2;
+    // input2.at<float>(1, 0) = 3;
+    // input2.at<float>(1, 1) = 4;
+    // cal(input1, input2, output, net);
 
     return 0;
 }

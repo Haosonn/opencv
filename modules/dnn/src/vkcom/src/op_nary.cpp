@@ -113,6 +113,9 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     Ptr<Descriptor> desSet = pipeline->createSet();
     group_x_ = group_y_ = group_z_ = 1; 
     VkCommandBuffer cmdBufferReal = cmdBuffer->get();
+
+    auto begin = std::chrono::high_resolution_clock::now();
+
     desSet->writeTensor(paramTensor, 3);
     desSet->writeTensor(shapeTensor, 4);
     desSet->writeTensor(stepTensor, 5);
@@ -121,11 +124,19 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     desSet->writeTensor(ins[1], 1);
     desSet->writeTensor(outs[0], 2);
 
+    auto end = std::chrono::high_resolution_clock::now();
+    CV_LOG_DEBUG(NULL, "Time elapsed to writeTensor: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
+
+    begin = std::chrono::high_resolution_clock::now();
+
     cmdBuffer->beginRecord();
     pipeline->bind(cmdBufferReal, desSet->get());
     vkCmdDispatch(cmdBufferReal, group_x_, group_y_, group_z_);
     cmdBuffer->endRecord();
     cmdPoolPtr->submitAndWait(cmdBufferReal);
+
+    end = std::chrono::high_resolution_clock::now();
+    CV_LOG_DEBUG(NULL, "Time elapsed to compute binary forward: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
 
     return true;
 }
