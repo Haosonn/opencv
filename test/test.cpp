@@ -110,7 +110,7 @@ int main() {
 
     net.setPreferableBackend(dnn::DNN_BACKEND_OPENCV);
     net.setPreferableTarget(dnn::DNN_TARGET_CPU);
-    cout << "Using Vulkan.\n";
+    cout << "Using CPU.\n";
     testSingle(input1, input2, net);
 
     // input1 = Mat::ones(3, 2, CV_32F);
