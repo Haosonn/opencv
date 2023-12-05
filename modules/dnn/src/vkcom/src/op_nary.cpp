@@ -10,8 +10,11 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-#define KSTRIP_LEN 32
 #define BLOCK_SIZE 64
+
+#define MAX_GROUP_COUNT_X 65535
+#define MAX_GROUP_COUNT_Y 65535
+#define MAX_GROUP_COUNT_Z 65535
 
 OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims, const int* _shapesBuf, const size_t* _stepsBuf) : naryOpType(_naryOpType), ninputs(_ninputs), max_ndims(_max_ndims)
 {
@@ -43,7 +46,7 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
         {
             CV_Assert(ninputs == 2);
             CV_Assert(max_ndims >= 2);
-            naryShaderType = kNaryShaderTypeBinary;
+            shaderType = kNaryShaderTypeBinary;
             shader_name = "nary_eltwise_binary_forward_spv";
             break;
         }
@@ -51,7 +54,7 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
         {
             CV_Assert(ninputs == 3);
             CV_Assert(max_ndims >= 2);
-            naryShaderType = kNaryShaderTypeTrinary;
+            shaderType = kNaryShaderTypeTrinary;
             shader_name = "nary_eltwise_trinary_forward_spv";
             break;
         }
@@ -61,7 +64,7 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
         case OPERATION::SUM:
         {
             CV_Assert(max_ndims >= 2);
-            naryShaderType = kNaryShaderTypeNary;
+            shaderType = kNaryShaderTypeNary;
             shader_name = "nary_eltwise_nary_forward_spv";
             break;
         }
@@ -74,9 +77,12 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
 
 void OpNary::firstForward()
 {
-    // TODO(VK) initialize first forward
     if (!firstForwardFinsh)
     {
+        config.local_size_x = BLOCK_SIZE;
+        config.local_size_y = 1; // TODO(vk) determine local_size_y
+        config.local_size_z = 1; // TODO(vk) determine local_size_z
+
         firstForwardFinsh = true;
     }
     else
@@ -95,8 +101,8 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     std::transform(stepsBuf.data(), stepsBuf.data() + dimSizes[0], actualSteps.begin(), [](int32_t sz){ return sz / 4; });
 
     Tensor paramTensor = Tensor(reinterpret_cast<const char *>(param.data()), paramSize, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    Tensor shapeTensor = Tensor(reinterpret_cast<const char *>(shapesBuf.data()), dimSizes, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-    Tensor stepTensor = Tensor(reinterpret_cast<const char *>(actualSteps.data()), dimSizes, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    Tensor shapeTensor = Tensor(reinterpret_cast<const char *>(shapesBuf.data()), dimSizes, kFormatInt32, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    Tensor stepTensor = Tensor(reinterpret_cast<const char *>(actualSteps.data()), dimSizes, kFormatInt32, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 
     destTypes = {
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // input1
@@ -116,13 +122,12 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 
     auto begin = std::chrono::high_resolution_clock::now();
 
-    desSet->writeTensor(paramTensor, 3);
-    desSet->writeTensor(shapeTensor, 4);
-    desSet->writeTensor(stepTensor, 5);
-
     desSet->writeTensor(ins[0], 0);
     desSet->writeTensor(ins[1], 1);
     desSet->writeTensor(outs[0], 2);
+    desSet->writeTensor(paramTensor, 3);
+    desSet->writeTensor(shapeTensor, 4);
+    desSet->writeTensor(stepTensor, 5);
 
     auto end = std::chrono::high_resolution_clock::now();
     CV_LOG_DEBUG(NULL, "Time elapsed to writeTensor: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
@@ -157,7 +162,7 @@ bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
         CV_Assert(tensor.getFormat() == kFormatFp32);
     }
 
-    switch(naryShaderType) {
+    switch(shaderType) {
         case kNaryShaderTypeBinary: {
             // std::cout << "Dispatched binary operation.\n"; // TODO(VK): delete this
             return binaryForward(ins, outs);
@@ -166,6 +171,25 @@ bool OpNary::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
         default:
             CV_Error(Error::StsNotImplemented, "Unsupported shader type invoked.");
     }
+
+    return true;
+}
+
+bool OpNary::computeGroupCount()
+{
+    if (shaderType == kNaryShaderTypeBinary)
+    {
+        group_x_ = 1; // TODO: Dispatch on direction x. Ideally, this should be related to `nplanes`.
+        group_y_ = 1; // TODO: Dispatch on direction y. Ideally, this should be related to individual elements.
+        group_z_ = 1;
+        return true;
+    }
+    else
+        CV_Error(CV_StsNotImplemented, "shader type is not supported at compute GroupCount.");
+
+    CV_Assert(group_x_ <= MAX_GROUP_COUNT_X);
+    CV_Assert(group_y_ <= MAX_GROUP_COUNT_Y);
+    CV_Assert(group_z_ <= MAX_GROUP_COUNT_Z);
 
     return true;
 }

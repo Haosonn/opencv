@@ -6,7 +6,7 @@ set(SOURCES test.cpp)
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 # Use opencv debug version
-set(OpenCV_DIR "../../build")
+set(OpenCV_DIR "../../build;../../build/x64-Debug/")
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 

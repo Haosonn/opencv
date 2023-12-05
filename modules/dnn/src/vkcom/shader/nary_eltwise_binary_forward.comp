@@ -1,5 +1,5 @@
 #version 450
-#extension GL_EXT_debug_printf : enable
+// #extension GL_EXT_debug_printf : enable
 #define KSTRIP_LEN 32
 #define BLOCK_SIZE 64
 #define WARP 32
@@ -13,37 +13,36 @@
 #define B_INSTRIP 4 // (ALL_THREAD/BLOCK_SIZE)
 #define B_STRIP 8 // (KSTRIP_LEN/B_INSTRIP)
 
-#define MNSTRIP (BLOCK_SIZE/INNER_THREAD)
-#define KSTRIP (KSTRIP_LEN/INNER_THREAD)
-
 #define PER_THREAD (BLOCK_SIZE/INNER_THREAD)
-
-// Experiment Row major VS column major.
 
 layout(binding = 0) readonly buffer Input1{
     float matA[];
 };
+
 layout(binding = 1) readonly buffer Input2{
     float matB[];
 };
+
 layout(binding = 2) writeonly buffer Output{
     float matOut[];
 };
+
 layout(binding = 3) uniform Params {
     int opType;
     int ninputs;
     int ndims;
 } params;
+
 layout(binding = 4) readonly buffer Shape {
     int shape[];
 };
+
 layout(binding = 5) readonly buffer Step {
     int matStep[];
 };
 
-shared float ashare[KSTRIP_LEN][BLOCK_SIZE]; // 2 KB
-shared float bshare[BLOCK_SIZE][KSTRIP_LEN]; // 2 KB
-
+/* local_size_x, local_size_y, local_size_z there defines the number of invocations 
+   of this compute shader in the current work group. */
 layout(local_size_x = ALL_THREAD, local_size_y = 1, local_size_z = 1) in;
 
 const int AND = 0;
@@ -70,6 +69,18 @@ const int WHERE = 19;
 
 void binary_add()
 {
+    int mIndex = int(gl_WorkGroupID.x) * BLOCK_SIZE;
+    int nIndex = int(gl_WorkGroupID.y) * BLOCK_SIZE;
+
+    int local_x = int(gl_LocalInvocationID.x) % 16; // 0~7
+    int local_y = int(gl_LocalInvocationID.x) / 16; // 0~31
+
+    int a_local_x = int(gl_LocalInvocationID.x) % KSTRIP_LEN; // 256 / 32 = 8
+    int a_local_y = int(gl_LocalInvocationID.x) / KSTRIP_LEN;
+
+    int b_local_x = int(gl_LocalInvocationID.x) % BLOCK_SIZE; // 256 / 64 = 4
+    int b_local_y = int(gl_LocalInvocationID.x) / BLOCK_SIZE;
+
     int ndims = params.ndims;
     int dp1 = matStep[2 * ndims - 1];
     int dp2 = matStep[3 * ndims - 1];
@@ -80,7 +91,7 @@ void binary_add()
     for (k = 0; k < ndims - 2; ++k)
         nplanes *= shape[k];
 
-    //TODO(VK): verify binary_add 
+    // TODO(VK): verify binary_add 
     for (plane_idx = 0; plane_idx < nplanes; plane_idx++) {
         int ptr1 = 0; // ptr1_ for matA
         int ptr2 = 0; // ptr2_ for matB
@@ -124,19 +135,7 @@ void binary_add()
 
 void main()
 {
-    debugPrintfEXT("nary_eltwise_binary_forward.comp loaded\n");
-    int mIndex = int(gl_WorkGroupID.x) * BLOCK_SIZE;
-    int nIndex = int(gl_WorkGroupID.y) * BLOCK_SIZE;
-
-    int local_x = int(gl_LocalInvocationID.x) % 16; // 0~7
-    int local_y = int(gl_LocalInvocationID.x) / 16; // 0~31
-
-    int a_local_x = int(gl_LocalInvocationID.x) % KSTRIP_LEN; // 256 / 32 = 8
-    int a_local_y = int(gl_LocalInvocationID.x) / KSTRIP_LEN;
-
-    int b_local_x = int(gl_LocalInvocationID.x) % BLOCK_SIZE; // 256 / 64 = 4
-    int b_local_y = int(gl_LocalInvocationID.x) / BLOCK_SIZE;
-
+    // debugPrintfEXT("nary_eltwise_binary_forward.comp loaded\n");
     switch (params.opType)
     {
         case int(ADD):

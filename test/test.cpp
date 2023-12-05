@@ -102,7 +102,7 @@ int main() {
 
     Mat input1, input2, output;
 
-    int matDimH = 16392, matDimW = 16392;
+    int matDimH = 8192, matDimW = 8192;
     input1 = Mat::ones(matDimH, matDimW, CV_32F);
     input2 = Mat::ones(matDimH, matDimW, CV_32F);
 
