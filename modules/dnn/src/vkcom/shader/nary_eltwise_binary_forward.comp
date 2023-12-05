@@ -3,7 +3,7 @@
 #extension GL_KHR_shader_subgroup_vote: enable
 // TODO: GET THIS BACK
 #define ALL_THREAD 256
-#define BATCH_SIZE 1024
+#define BATCH_SIZE 16
 #define PER_THREAD (BLOCK_SIZE/INNER_THREAD)
 
 layout(binding = 0) readonly buffer Input1{
@@ -22,7 +22,6 @@ layout(binding = 3) uniform Params {
     int opType;
     int ninputs;
     int ndims;
-    int batch;
 } params;
 
 layout(binding = 4) readonly buffer Shape {
@@ -83,7 +82,7 @@ void binary_add()
     }
 
     int i2_offset = int(gl_WorkGroupID.y);
-    int i1_offset = int(gl_LocalInvocationID.x) * BATCH_SIZE + params.batch * BATCH_SIZE * ALL_THREAD;
+    int i1_offset = int(gl_LocalInvocationID.x) * BATCH_SIZE + int(gl_WorkGroupID.z) * BATCH_SIZE * ALL_THREAD;
 
     ptr1 += i2_offset * matStep[2 * ndims - 2];
     ptr2 += i2_offset * matStep[3 * ndims - 2];
