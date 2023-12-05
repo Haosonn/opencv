@@ -1,7 +1,9 @@
 #version 450
 // #extension GL_EXT_debug_printf : enable
+#extension GL_KHR_shader_subgroup_vote: enable
+// TODO: GET THIS BACK
 #define ALL_THREAD 256
-#define BLOCK_SIZE 64
+#define BATCH_SIZE 1024
 #define PER_THREAD (BLOCK_SIZE/INNER_THREAD)
 
 layout(binding = 0) readonly buffer Input1{
@@ -20,6 +22,7 @@ layout(binding = 3) uniform Params {
     int opType;
     int ninputs;
     int ndims;
+    int batch;
 } params;
 
 layout(binding = 4) readonly buffer Shape {
@@ -79,30 +82,38 @@ void binary_add()
         idx = next_idx;
     }
 
-    int i2_offset = int(gl_WorkGroupID.z);
-    int i1_offset = int(gl_LocalInvocationID.x);
+    int i2_offset = int(gl_WorkGroupID.y);
+    int i1_offset = int(gl_LocalInvocationID.x) * BATCH_SIZE + params.batch * BATCH_SIZE * ALL_THREAD;
 
     ptr1 += i2_offset * matStep[2 * ndims - 2];
     ptr2 += i2_offset * matStep[3 * ndims - 2];
     ptr += i2_offset * matStep[ndims - 2];
 
     if (dp1 == 1 && dp2 == 1 && dp == 1) {
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1] = matA[ptr1 + i1] + matB[ptr2 + i1];
+        for (int i1 = i1_offset; i1 < i1_offset + BATCH_SIZE; ++i1) {
+            if (i1 < n1) {
+                matOut[ptr + i1] = matA[ptr1 + i1] + matB[ptr2 + i1];
+            }
         }
     } else if (dp1 == 1 && dp2 == 0 && dp == 1) {
         float k = matB[ptr2];
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1] = matA[ptr1 + i1] + k;
+        for (int i1 = i1_offset; i1 < i1_offset + BATCH_SIZE; ++i1) {
+            if (i1 < n1) {
+                matOut[ptr + i1] = matA[ptr1 + i1] + k;
+            }
         }
     } else if (dp1 == 0 && dp2 == 1 && dp == 1) {
         float k = matA[ptr1];
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1] = k + matB[ptr2 + i1];
+        for (int i1 = i1_offset; i1 < i1_offset + BATCH_SIZE; ++i1) {
+            if (i1 < n1) {
+                matOut[ptr + i1] = k + matB[ptr2 + i1];
+            }
         }
     } else {
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] + matB[ptr2 + i1 * dp2];
+        for (int i1 = i1_offset; i1 < i1_offset + BATCH_SIZE; ++i1) {
+            if (i1 < n1) {
+                matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] + matB[ptr2 + i1 * dp2];
+            }
         }
     }
 }

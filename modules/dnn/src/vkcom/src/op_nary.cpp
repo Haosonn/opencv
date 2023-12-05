@@ -10,7 +10,8 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-#define BLOCK_SIZE 64
+#define ALL_THREAD 256
+#define BATCH_SIZE 1024
 
 #define MAX_GROUP_COUNT_X 65535
 #define MAX_GROUP_COUNT_Y 65535
@@ -51,9 +52,11 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
 
             // TODO(VK): confirm if this makes any sense
             nplanes = std::accumulate(shapesBuf.data(), shapesBuf.data() + max_ndims - 2, 1, [](int32_t a, int32_t b) { return a * b; } );
+            nbatches = std::max(1, shapesBuf[max_ndims - 1] / ALL_THREAD / BATCH_SIZE);
             N2 = shapesBuf.data()[max_ndims - 2];
             int N3 = shapesBuf.data()[max_ndims - 1];
-            CV_LOG_DEBUG(NULL, "max_ndims="<<max_ndims<<", nplanes="<<nplanes<<", N2="<<N2<<", N3="<<N3);
+
+            CV_LOG_DEBUG(NULL, "max_ndims="<<max_ndims<<", nplanes="<<nplanes<<", nbatches="<< nbatches<<", N2="<<N2<<", N3="<<N3);
             break;
         }
         case OPERATION::WHERE:
@@ -97,7 +100,7 @@ void OpNary::firstForward()
 
 bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 {
-    std::vector<int32_t> param = {(int32_t)naryOpType, ninputs, max_ndims};
+    std::vector<int32_t> param = {(int32_t)naryOpType, ninputs, max_ndims, 0};
     std::vector<int32_t> paramSize = {(int32_t)param.size()};
     std::vector<int32_t> dimSizes = {(ninputs + 1) * max_ndims};
     std::vector<int32_t> actualSteps;
@@ -106,7 +109,6 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     actualSteps.resize(stepsBuf.size());
     std::transform(stepsBuf.data(), stepsBuf.data() + dimSizes[0], actualSteps.begin(), [](int32_t sz){ return sz / 4; });
 
-    Tensor paramTensor = Tensor(reinterpret_cast<const char *>(param.data()), paramSize, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     Tensor shapeTensor = Tensor(reinterpret_cast<const char *>(shapesBuf.data()), dimSizes, kFormatInt32, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
     Tensor stepTensor = Tensor(reinterpret_cast<const char *>(actualSteps.data()), dimSizes, kFormatInt32, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 
@@ -129,8 +131,7 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 
     desSet->writeTensor(ins[0], 0);
     desSet->writeTensor(ins[1], 1);
-    desSet->writeTensor(outs[0], 2);
-    desSet->writeTensor(paramTensor, 3);
+    desSet->writeTensor(outs[0], 2);    
     desSet->writeTensor(shapeTensor, 4);
     desSet->writeTensor(stepTensor, 5);
 
@@ -140,11 +141,17 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 
     begin = std::chrono::high_resolution_clock::now();
 
-    cmdBuffer->beginRecord();
-    pipeline->bind(cmdBufferReal, desSet->get());
-    vkCmdDispatch(cmdBufferReal, group_x_, group_y_, group_z_);
-    cmdBuffer->endRecord();
-    cmdPoolPtr->submitAndWait(cmdBufferReal);
+    for (size_t b = 0; b < nbatches; ++b)
+    {
+        param[3] = b;
+        Tensor paramTensor = Tensor(reinterpret_cast<const char *>(param.data()), paramSize, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        desSet->writeTensor(paramTensor, 3);
+        cmdBuffer->beginRecord();
+        pipeline->bind(cmdBufferReal, desSet->get());
+        vkCmdDispatch(cmdBufferReal, group_x_, group_y_, group_z_);
+        cmdBuffer->endRecord();
+        cmdPoolPtr->submitAndWait(cmdBufferReal);
+    }
 
     // TODO(VK): remove experimental time counter
     end = std::chrono::high_resolution_clock::now();
@@ -187,8 +194,8 @@ bool OpNary::computeGroupCount()
     if (shaderType == kNaryShaderTypeBinary)
     {
         group_x_ = nplanes; // TODO(VK): Dispatch on direction x. Parallelism at plane level
-        group_y_ = 1;       // TODO(VK): Dispatch on direction y. Parallelism at ndims - 2
-        group_z_ = N2;      // TODO(VK): Determine whether to dispatch
+        group_y_ = N2;      // TODO(VK): Dispatch on direction y. Parallelism at ndims - 2
+        group_z_ = 1;       // TODO(VK): Determine whether to dispatch
     }
     else
     {

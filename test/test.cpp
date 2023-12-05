@@ -62,10 +62,11 @@ void cal(Mat &input1, Mat &input2, Mat &output, dnn::Net& net) {
     net.setInput(input1, "input1");
     net.setInput(input2, "input2");
 
+    cout << "\033[93m" << "First forwarding." << "\033[0m\n";
     output = net.forward();
+    cout << "\033[93m" << "Formal forwarding." << "\033[0m\n";
 
     auto begin = std::chrono::high_resolution_clock::now();
-    CV_LOG_DEBUG(NULL, "start forwarding");
     output = net.forward();
     auto end = std::chrono::high_resolution_clock::now();
     cout << "\033[93mTime elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\033[0m\n";
@@ -112,11 +113,12 @@ Mat testSingle(Mat &input1, Mat &input2, dnn::Net& net, bool useVK, bool print =
 
 void verifyResult(Mat& mat1, Mat& mat2)
 {
-    for (auto it1 = mat1.begin<float>(), it2 = mat2.begin<float>(); it1 != mat1.end<float>(); ++it1, ++it2)
+    size_t sz = 0;
+    for (auto it1 = mat1.begin<float>(), it2 = mat2.begin<float>(); it1 != mat1.end<float>(); ++it1, ++it2, ++sz)
     {
         if (std::fabs(*it1 - *it2) > 1e-9)
         {
-            cout << "\033[91mElement unmatch: " << *it1 << " != " << *it2 << "\033[0m\n";
+            cout << "\033[91mElement unmatch: " << *it1 << " != " << *it2 << ", at " << sz << "\033[0m\n";
             abort();
             //return;
         }

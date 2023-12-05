@@ -76,6 +76,7 @@ private:
     AutoBuffer<int32_t> stepsBuf;
     int nplanes; // number of planes computations are to be performed on
     int N2; // value of shape[ndims - 2]
+    int nbatches;
 
     bool firstForwardFinsh = false;
 };
