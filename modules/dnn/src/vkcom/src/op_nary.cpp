@@ -10,8 +10,7 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-#define ALL_THREAD 256
-#define BATCH_SIZE 1024
+#define BLOCK_SIZE 64
 
 #define MAX_GROUP_COUNT_X 65535
 #define MAX_GROUP_COUNT_Y 65535
@@ -52,11 +51,9 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
 
             // TODO(VK): confirm if this makes any sense
             nplanes = std::accumulate(shapesBuf.data(), shapesBuf.data() + max_ndims - 2, 1, [](int32_t a, int32_t b) { return a * b; } );
-            nbatches = std::max(1, shapesBuf[max_ndims - 1] / ALL_THREAD / BATCH_SIZE);
             N2 = shapesBuf.data()[max_ndims - 2];
             int N3 = shapesBuf.data()[max_ndims - 1];
-
-            CV_LOG_DEBUG(NULL, "max_ndims="<<max_ndims<<", nplanes="<<nplanes<<", nbatches="<< nbatches<<", N2="<<N2<<", N3="<<N3);
+            CV_LOG_DEBUG(NULL, "max_ndims="<<max_ndims<<", nplanes="<<nplanes<<", N2="<<N2<<", N3="<<N3);
             break;
         }
         case OPERATION::WHERE:
@@ -133,7 +130,7 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     desSet->writeTensor(ins[0], 0);
     desSet->writeTensor(ins[1], 1);
     desSet->writeTensor(outs[0], 2);
-    desSet->writeTensor(paramTensor, 3);  
+    desSet->writeTensor(paramTensor, 3);
     desSet->writeTensor(shapeTensor, 4);
     desSet->writeTensor(stepTensor, 5);
 
@@ -189,9 +186,9 @@ bool OpNary::computeGroupCount()
 {
     if (shaderType == kNaryShaderTypeBinary)
     {
-        group_x_ = nplanes;  // TODO(VK): Dispatch on direction x. Parallelism at plane level
-        group_y_ = N2;       // TODO(VK): Dispatch on direction y. Parallelism at ndims - 2
-        group_z_ = nbatches; // TODO(VK): Determine whether to dispatch
+        group_x_ = nplanes; // TODO(VK): Dispatch on direction x. Parallelism at plane level
+        group_y_ = 1;       // TODO(VK): Dispatch on direction y. Parallelism at ndims - 2
+        group_z_ = N2;      // TODO(VK): Determine whether to dispatch
     }
     else
     {
