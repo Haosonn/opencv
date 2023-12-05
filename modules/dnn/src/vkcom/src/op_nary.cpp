@@ -26,7 +26,7 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
     std::transform(_stepsBuf, _stepsBuf + (ninputs + 1) * max_ndims, stepsBuf.data(), [](size_t x) { return static_cast<int32_t>(x); });
 
 
-    // TODO(VK): support more opeartion types
+    // TODO(VK): support more types of operation
     switch(naryOpType) {
         // case OPERATION::EQUAL:
         // case OPERATION::GREATER:

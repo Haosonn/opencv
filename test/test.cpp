@@ -145,15 +145,15 @@ void speedTest(dnn::Net &net)
     int matDimH = 4096, matDimW = 4096;
     input1 = Mat::ones(matDimH, matDimW, CV_32F);
     input2 = Mat::ones(matDimH, matDimW, CV_32F);
-    input1.at<float>(2134, 723) = 608.53;
+    input1.at<float>(2000, 723) = 608.53;
     input1.at<float>(712, 4) = 123.1231;
     input1.at<float>(38, 218) = 21.12;
     input1.at<float>(64, 213) = 2813.2;
-    input1.at<float>(2134, 0) = 213.231;
+    input1.at<float>(2000, 0) = 213.231;
     input2.at<float>(64, 723) = -27.0;
     input2.at<float>(128, 4) = 18.5;
     input2.at<float>(256, 218) = -212223;
-    input2.at<float>(2134, 0) = -1.7e4;
+    input2.at<float>(2000, 0) = -1.7e4;
     input2.at<float>(274, 0) = 2.3e5;
 
     Mat output1 = testSingle(input1, input2, net, true, false);
