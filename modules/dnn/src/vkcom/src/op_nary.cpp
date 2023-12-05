@@ -11,7 +11,7 @@ namespace cv { namespace dnn { namespace vkcom {
 #ifdef HAVE_VULKAN
 
 #define ALL_THREAD 256
-#define BATCH_SIZE 16
+#define BATCH_SIZE 1024
 
 #define MAX_GROUP_COUNT_X 65535
 #define MAX_GROUP_COUNT_Y 65535

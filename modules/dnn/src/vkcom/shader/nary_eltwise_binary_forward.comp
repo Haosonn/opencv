@@ -3,7 +3,7 @@
 #extension GL_KHR_shader_subgroup_vote: enable
 // TODO: GET THIS BACK
 #define ALL_THREAD 256
-#define BATCH_SIZE 16
+#define BATCH_SIZE 1024
 #define PER_THREAD (BLOCK_SIZE/INNER_THREAD)
 
 layout(binding = 0) readonly buffer Input1{
