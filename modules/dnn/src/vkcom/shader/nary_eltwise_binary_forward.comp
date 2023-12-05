@@ -101,11 +101,9 @@ void binary_add()
             matOut[ptr + i1] = k + matB[ptr2 + i1];
         }
     } else {
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD, 
-                                          ptr1 += ALL_THREAD * dp1, 
-                                          ptr2 += ALL_THREAD * dp2, 
-                                          ptr += ALL_THREAD * dp)
-            matOut[ptr] = matA[ptr1] + matB[ptr2];
+        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
+            matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] + matB[ptr2 + i1 * dp2];
+        }
     }
 }
 
