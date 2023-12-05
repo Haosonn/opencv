@@ -26,7 +26,7 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
     std::transform(_stepsBuf, _stepsBuf + (ninputs + 1) * max_ndims, stepsBuf.data(), [](size_t x) { return static_cast<int32_t>(x); });
 
 
-    //TODO(VK) 
+    // TODO(VK): support more opeartion types
     switch(naryOpType) {
         // case OPERATION::EQUAL:
         // case OPERATION::GREATER:
@@ -48,6 +48,12 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
             CV_Assert(max_ndims >= 2);
             shaderType = kNaryShaderTypeBinary;
             shader_name = "nary_eltwise_binary_forward_spv";
+
+            // TODO(VK): confirm if this makes any sense
+            nplanes = std::accumulate(shapesBuf.data(), shapesBuf.data() + max_ndims - 2, 1, [](int32_t a, int32_t b) { return a * b; } );
+            N2 = shapesBuf.data()[max_ndims - 2];
+            int N3 = shapesBuf.data()[max_ndims - 1];
+            CV_LOG_DEBUG(NULL, "max_ndims="<<max_ndims<<", nplanes="<<nplanes<<", N2="<<N2<<", N3="<<N3);
             break;
         }
         case OPERATION::WHERE:
@@ -79,10 +85,10 @@ void OpNary::firstForward()
 {
     if (!firstForwardFinsh)
     {
-        config.local_size_x = BLOCK_SIZE;
-        config.local_size_y = 1; // TODO(vk) determine local_size_y
-        config.local_size_z = 1; // TODO(vk) determine local_size_z
-
+        config.local_size_x = 1; // TODO(vk) determine local_size_y if necessary
+        config.local_size_y = 1; // TODO(vk) determine local_size_y if necessary
+        config.local_size_z = 1; // TODO(vk) determine local_size_z if necessary
+        computeGroupCount();
         firstForwardFinsh = true;
     }
     else
@@ -117,7 +123,6 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     Ptr<Pipeline> pipeline = pipelineFactoryPtr->getPipeline(shader_name, destTypes);
     Ptr<CommandBuffer> cmdBuffer = cmdPoolPtr->allocBuffer();
     Ptr<Descriptor> desSet = pipeline->createSet();
-    group_x_ = group_y_ = group_z_ = 1;
     VkCommandBuffer cmdBufferReal = cmdBuffer->get();
 
     auto begin = std::chrono::high_resolution_clock::now();
@@ -129,6 +134,7 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     desSet->writeTensor(shapeTensor, 4);
     desSet->writeTensor(stepTensor, 5);
 
+    // TODO: remove experimental time counter
     auto end = std::chrono::high_resolution_clock::now();
     CV_LOG_DEBUG(NULL, "Time elapsed to writeTensor: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
 
@@ -140,6 +146,7 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     cmdBuffer->endRecord();
     cmdPoolPtr->submitAndWait(cmdBufferReal);
 
+    // TODO(VK): remove experimental time counter
     end = std::chrono::high_resolution_clock::now();
     CV_LOG_DEBUG(NULL, "Time elapsed to compute binary forward: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
 
@@ -179,17 +186,21 @@ bool OpNary::computeGroupCount()
 {
     if (shaderType == kNaryShaderTypeBinary)
     {
-        group_x_ = 1; // TODO: Dispatch on direction x. Ideally, this should be related to `nplanes`.
-        group_y_ = 1; // TODO: Dispatch on direction y. Ideally, this should be related to individual elements.
-        group_z_ = 1;
-        return true;
+        group_x_ = nplanes; // TODO(VK): Dispatch on direction x. Parallelism at plane level
+        group_y_ = 1;       // TODO(VK): Dispatch on direction y. Parallelism at ndims - 2
+        group_z_ = N2;      // TODO(VK): Determine whether to dispatch
     }
     else
+    {
         CV_Error(CV_StsNotImplemented, "shader type is not supported at compute GroupCount.");
+    }
 
     CV_Assert(group_x_ <= MAX_GROUP_COUNT_X);
     CV_Assert(group_y_ <= MAX_GROUP_COUNT_Y);
     CV_Assert(group_z_ <= MAX_GROUP_COUNT_Z);
+
+    // TODO(VK): delete this
+    CV_LOG_DEBUG(NULL, "dispatching: group_x_="<<group_x_<<", group_y_="<<group_y_<<", group_z_="<<group_z_);
 
     return true;
 }

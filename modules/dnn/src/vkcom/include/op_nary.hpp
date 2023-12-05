@@ -74,6 +74,8 @@ private:
     int max_ndims;
     AutoBuffer<int32_t> shapesBuf;
     AutoBuffer<int32_t> stepsBuf;
+    int nplanes; // number of planes computations are to be performed on
+    int N2; // value of shape[ndims - 2]
 
     bool firstForwardFinsh = false;
 };

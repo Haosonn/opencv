@@ -68,22 +68,97 @@ void cal(Mat &input1, Mat &input2, Mat &output, dnn::Net& net) {
     CV_LOG_DEBUG(NULL, "start forwarding");
     output = net.forward();
     auto end = std::chrono::high_resolution_clock::now();
-    cout << "Time elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\n";
+    cout << "\033[93mTime elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\033[0m\n";
 }
 
-void testSingle(Mat &input1, Mat &input2, dnn::Net& net, bool print = false)
+Mat testSingle(Mat &input1, Mat &input2, dnn::Net& net, bool useVK, bool print = false, bool useInternelPrint = true)
 {
     Mat output;
+    if (useVK)
+    {
+        net.setPreferableBackend(dnn::DNN_BACKEND_VKCOM);
+        net.setPreferableTarget(dnn::DNN_TARGET_VULKAN);
+        cout << "\033[95mUsing Vulkan.\033[0m\n";
+    }
+    else
+    {
+        net.setPreferableBackend(dnn::DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(dnn::DNN_TARGET_CPU);
+        cout << "\033[95mUsing CPU.\033[0m\n";
+    }
+
     cal(input1, input2, output, net);
     if (print)
     {
         cout << "input1: " << endl;
-        printMat(input1);
+        if (useInternelPrint)
+            cout << input1 << endl;
+        else
+            printMat(input1);
         cout << "input2: " << endl;
-        printMat(input2);
+        if (useInternelPrint)
+            cout << input2 << endl;
+        else
+            printMat(input2);
+
         cout << "output: " << endl;
+        if (useInternelPrint)
+            cout << output << endl;
+        else
             printMat(output);
     }
+    return output;
+}
+
+void verifyResult(Mat& mat1, Mat& mat2)
+{
+    for (auto it1 = mat1.begin<float>(), it2 = mat2.begin<float>(); it1 != mat1.end<float>(); ++it1, ++it2)
+    {
+        if (std::fabs(*it1 - *it2) > 1e-9)
+        {
+            cout << "\033[91mElement unmatch: " << *it1 << " != " << *it2 << "\033[0m\n";
+            abort();
+            //return;
+        }
+    }
+    cout << "\033[92mResults passed verification.\033[0m\n";
+}
+
+void validityTest(dnn::Net& net)
+{
+    Mat input1, input2;
+
+    input1 = Mat::ones(8, 8, CV_32F);
+    input2 = Mat::ones(8, 1, CV_32F);
+    input1.at<float>(3, 2) = 25;
+    input2.at<float>(3, 0) = 17;
+
+    Mat output1 = testSingle(input1, input2, net, true, true);
+    Mat output2 = testSingle(input1, input2, net, false, true);
+    verifyResult(output1, output2);
+}
+
+void speedTest(dnn::Net &net)
+{
+    Mat input1, input2;
+
+    int matDimH = 4096, matDimW = 4096;
+    input1 = Mat::ones(matDimH, matDimW, CV_32F);
+    input2 = Mat::ones(matDimH, matDimW, CV_32F);
+    input1.at<float>(2134, 723) = 608.53;
+    input1.at<float>(712, 4) = 123.1231;
+    input1.at<float>(38, 218) = 21.12;
+    input1.at<float>(64, 213) = 2813.2;
+    input1.at<float>(2134, 0) = 213.231;
+    input2.at<float>(64, 723) = -27.0;
+    input2.at<float>(128, 4) = 18.5;
+    input2.at<float>(256, 218) = -212223;
+    input2.at<float>(2134, 0) = -1.7e4;
+    input2.at<float>(274, 0) = 2.3e5;
+
+    Mat output1 = testSingle(input1, input2, net, true, false);
+    Mat output2 = testSingle(input1, input2, net, false, false);
+    verifyResult(output1, output2);
 }
 
 int main() {
@@ -100,41 +175,7 @@ int main() {
     net.connect(0, 0, 1, 0);
     net.connect(0, 1, 1, 1);
 
-    Mat input1, input2, output;
-
-    int matDimH = 8192, matDimW = 8192;
-    input1 = Mat::ones(matDimH, matDimW, CV_32F);
-    input2 = Mat::ones(matDimH, matDimW, CV_32F);
-
-    net.setPreferableBackend(dnn::DNN_BACKEND_VKCOM);
-    net.setPreferableTarget(dnn::DNN_TARGET_VULKAN);
-    cout << "Using Vulkan.\n";
-    testSingle(input1, input2, net);
-
-    net.setPreferableBackend(dnn::DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(dnn::DNN_TARGET_CPU);
-    cout << "Using CPU.\n";
-    testSingle(input1, input2, net);
-
-    // input1 = Mat::ones(3, 2, CV_32F);
-    // input2 = Mat::ones(3, 1, CV_32F);
-    // input2.at<float>(0, 0) = 2;
-    // cal(input1, input2, output, net);
-    // printMat(output);
-
-    // input1 = Mat::ones(3, 1, CV_32F);
-    // input2 = Mat::ones(1, 3, CV_32F);
-    // input2.at<float>(0, 0) = 2;
-    // cal(input1, input2, output, net);
-
-    // generate a mat with 4 dims
-    // input1 = Mat::ones(4, vector<int>{3, 2, 2, 2}.data(), CV_32F);
-    // input2 = Mat::ones(2, 2, CV_32F);
-    // input2.at<float>(0, 0) = 1;
-    // input2.at<float>(0, 1) = 2;
-    // input2.at<float>(1, 0) = 3;
-    // input2.at<float>(1, 1) = 4;
-    // cal(input1, input2, output, net);
-
+    //validityTest(net);
+    speedTest(net);
     return 0;
 }
