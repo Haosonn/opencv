@@ -117,8 +117,8 @@ void verifyResult(Mat& mat1, Mat& mat2)
         if (std::fabs(*it1 - *it2) > 1e-9)
         {
             cout << "\033[91mElement unmatch: " << *it1 << " != " << *it2 << "\033[0m\n";
-            abort();
-            //return;
+            //exit(1);
+            return;
         }
     }
     cout << "\033[92mResults passed verification.\033[0m\n";

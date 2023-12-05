@@ -125,6 +125,7 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     Ptr<Descriptor> desSet = pipeline->createSet();
     VkCommandBuffer cmdBufferReal = cmdBuffer->get();
 
+    // TODO: remove experimental time counter
     auto begin = std::chrono::high_resolution_clock::now();
 
     desSet->writeTensor(ins[0], 0);
@@ -138,6 +139,7 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     auto end = std::chrono::high_resolution_clock::now();
     CV_LOG_DEBUG(NULL, "Time elapsed to writeTensor: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
 
+    // TODO: remove experimental time counter
     begin = std::chrono::high_resolution_clock::now();
 
     cmdBuffer->beginRecord();
@@ -187,8 +189,8 @@ bool OpNary::computeGroupCount()
     if (shaderType == kNaryShaderTypeBinary)
     {
         group_x_ = nplanes; // TODO(VK): Dispatch on direction x. Parallelism at plane level
-        group_y_ = 1;       // TODO(VK): Dispatch on direction y. Parallelism at ndims - 2
-        group_z_ = N2;      // TODO(VK): Determine whether to dispatch
+        group_y_ = 1;       // TODO(VK): Dispatch on direction y. 
+        group_z_ = N2;      // TODO(VK): Dispatch on direction z. Parallelism at ndims - 2
     }
     else
     {

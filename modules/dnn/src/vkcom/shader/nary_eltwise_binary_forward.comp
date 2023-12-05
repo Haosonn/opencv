@@ -1,8 +1,7 @@
 #version 450
 // #extension GL_EXT_debug_printf : enable
 #define ALL_THREAD 256
-#define BLOCK_SIZE 64
-#define PER_THREAD (BLOCK_SIZE/INNER_THREAD)
+#define STEP_SIZE 64
 
 layout(binding = 0) readonly buffer Input1{
     float matA[];
