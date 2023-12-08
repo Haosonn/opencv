@@ -536,7 +536,7 @@ GPUInfo Context::parseGPUInfo(VkPhysicalDevice& kPhysicalDevice)
 
     CV_LOG_INFO(NULL, "maxSharedMemorySize = "<<info.maxSharedMemorySize<<".");
     CV_LOG_INFO(NULL, "maxWorkgroupCount ( "
-            <<info.maxWorkgroupSize_x<<", "<<info.maxWorkgroupSize_y<<", "<<info.maxWorkgroupSize_z<<").");
+            <<info.maxWorkgroupCount_x<<", "<<info.maxWorkgroupCount_y<<", "<<info.maxWorkgroupCount_z<<").");
     CV_LOG_INFO(NULL, "maxWorkgroup_invocations = "<<info.maxWorkgroup_invocations<<".");
     CV_LOG_INFO(NULL, "maxWorkgroupSize ( "
             <<info.maxWorkgroupSize_x<<", "<<info.maxWorkgroupSize_y<<", "<<info.maxWorkgroupSize_z<<").");
