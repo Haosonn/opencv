@@ -34,7 +34,7 @@ layout(binding = 5) readonly buffer Step {
    of this compute shader in the current work group. */
 // TODO: Check if this makes any sense
 // TODO: Check if it is required to fetch PhysicalDeviceLimit from Context
-// TODO: here we shall assume that maxGroupInvocation is 2048.
+// TODO: here we shall assume that maxGroupInvocation is 1024.
 layout(local_size_x = ALL_THREAD, local_size_y = 1, local_size_z = 1) in; // TODO: Check if this makes any sense
 
 const int AND = 0;
