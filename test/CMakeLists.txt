@@ -10,13 +10,12 @@ set(OpenCV_DIR "../../build")
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-
-# set(RENDERDOC_PATH "C:\\Program Files\\RenderDoc")
-if (DEFINED RENDERDOC_PATH)
+if (NOT RENDERDOC_PATH)
+  message(WARNING "RENDERDOC_PATH is not defined or is empty. Set this variable to enable renderdoc support.")
+  set(RENDERDOC_PATH "" CACHE PATH "Path to renderdoc header file")
+else()
   message("RENDERDOC_PATH is defined: ${RENDERDOC_PATH}")
   include_directories(${RENDERDOC_PATH})
-else()
-  message(WARNING "RENDERDOC_PATH is not defined. Set this variable to enable renderdoc support.")
 endif()
 
 # Add opencv lib
