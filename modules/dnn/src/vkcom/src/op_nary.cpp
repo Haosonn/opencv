@@ -10,7 +10,7 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-#define BLOCK_SIZE 64
+#define STEP_SIZE 65536
 
 #define MAX_GROUP_COUNT_X 65535
 #define MAX_GROUP_COUNT_Y 65535
@@ -52,8 +52,8 @@ OpNary::OpNary(const OpNary::OPERATION _naryOpType, int _ninputs, int _max_ndims
             // TODO(VK): confirm if this makes any sense
             nplanes = std::accumulate(shapesBuf.data(), shapesBuf.data() + max_ndims - 2, 1, [](int32_t a, int32_t b) { return a * b; } );
             N2 = shapesBuf.data()[max_ndims - 2];
-            int N3 = shapesBuf.data()[max_ndims - 1];
-            CV_LOG_DEBUG(NULL, "max_ndims="<<max_ndims<<", nplanes="<<nplanes<<", N2="<<N2<<", N3="<<N3);
+            N1 = shapesBuf.data()[max_ndims - 1];
+            CV_LOG_DEBUG(NULL, "max_ndims="<<max_ndims<<", nplanes="<<nplanes<<", N2="<<N2<<", N1="<<N1);
             break;
         }
         case OPERATION::WHERE:
@@ -188,9 +188,9 @@ bool OpNary::computeGroupCount()
 {
     if (shaderType == kNaryShaderTypeBinary)
     {
-        group_x_ = nplanes; // TODO(VK): Dispatch on direction x. Parallelism at plane level
-        group_y_ = N2;      // TODO(VK): Dispatch on direction y. Parallelism at ndims - 2.
-        group_z_ = 1;       // TODO(VK): Dispatch on direction z.
+        group_x_ = nplanes;                                     // TODO(VK): Dispatch on direction x. Parallelism at plane level
+        group_y_ = alignSize(N2, STEP_SIZE) / STEP_SIZE;      // TODO(VK): Dispatch on direction y. Parallelism at ndims - 2.
+        group_z_ = alignSize(N1, STEP_SIZE) / STEP_SIZE;      // TODO(VK): Dispatch on direction z. Parallelism at ndims - 1.
     }
     else
     {

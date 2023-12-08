@@ -1,7 +1,7 @@
 #version 450
 // #extension GL_EXT_debug_printf : enable
-#define ALL_THREAD 1024
-#define STEP_SIZE 64
+#define ALL_THREAD 256
+#define STEP_SIZE 65536
 
 layout(binding = 0) readonly buffer Input1{
     float matA[];
@@ -33,7 +33,7 @@ layout(binding = 5) readonly buffer Step {
    of this compute shader in the current work group. */
 // TODO: Check if this makes any sense
 // TODO: Check if it is required to fetch PhysicalDeviceLimit from Context
-// TODO: here we shall assume that maxGroupInvocation is 1024.
+// TODO: here we shall assume that maxGroupInvocation is 2048.
 layout(local_size_x = ALL_THREAD, local_size_y = 1, local_size_z = 1) in; // TODO: Check if this makes any sense
 
 const int AND = 0;
@@ -81,30 +81,42 @@ void binary_add()
         idx = next_idx;
     }
 
-    int i2_offset = int(gl_WorkGroupID.y);
-    int i1_offset = int(gl_LocalInvocationID.x);
+    int threadID = int(gl_LocalInvocationID.x);
+    int i2_offset = (int(gl_WorkGroupID.y)) * STEP_SIZE + threadID;
+    int i1_offset = (int(gl_WorkGroupID.z)) * STEP_SIZE;
 
-    ptr1 += i2_offset * matStep[2 * ndims - 2];
-    ptr2 += i2_offset * matStep[3 * ndims - 2];
-    ptr += i2_offset * matStep[ndims - 2];
+    ptr1 += i2_offset * matStep[2 * ndims - 2] + i1_offset * dp1;
+    ptr2 += i2_offset * matStep[3 * ndims - 2] + i1_offset * dp2;
+    ptr += i2_offset * matStep[ndims - 2] + i1_offset * dp;
 
-    if (dp1 == 1 && dp2 == 1 && dp == 1) {
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1] = matA[ptr1 + i1] + matB[ptr2 + i1];
-        }
-    } else if (dp1 == 1 && dp2 == 0 && dp == 1) {
-        float k = matB[ptr2];
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1] = matA[ptr1 + i1] + k;
-        }
-    } else if (dp1 == 0 && dp2 == 1 && dp == 1) {
-        float k = matA[ptr1];
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1] = k + matB[ptr2 + i1];
-        }
-    } else {
-        for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] + matB[ptr2 + i1 * dp2];
+    if (i2_offset < n2)
+    {
+        if (dp1 == 1 && dp2 == 1 && dp == 1) {
+            for (int i1 = 0; i1 < STEP_SIZE; ++i1) {
+                if (ptr + i1 < n1) {
+                    matOut[ptr + i1] = matA[ptr1 + i1] + matB[ptr2 + i1];
+                }
+            }
+        } else if (dp1 == 1 && dp2 == 0 && dp == 1) {
+            float k = matB[ptr2];
+            for (int i1 = 0; i1 < STEP_SIZE; ++i1) {
+                if (ptr + i1 < n1) {
+                    matOut[ptr + i1] = matA[ptr1 + i1] + k;
+                }
+            }
+        } else if (dp1 == 0 && dp2 == 1 && dp == 1) {
+            float k = matA[ptr1];
+            for (int i1 = 0; i1 < STEP_SIZE; ++i1) {
+                if (ptr + i1 < n1) {
+                    matOut[ptr + i1] = k + matB[ptr2 + i1];
+                }
+            }
+        } else {
+            for (int i1 = 0; i1 < STEP_SIZE; ++i1) {
+                if (ptr + i1 < n1) {
+                    matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] + matB[ptr2 + i1 * dp2];
+                }
+            }
         }
     }
 }
