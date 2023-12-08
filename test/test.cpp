@@ -154,8 +154,6 @@ void speedTest(Net& net)
     uniform_real_distribution<float> dist3;
     uniform_int_distribution<int> distidxX(0, matDimH - 1);
     uniform_int_distribution<int> distidxY(0, matDimW - 1);
-    uniform_int_distribution<int> distidxX(0, matDimH - 1);
-    uniform_int_distribution<int> distidxY(0, matDimW - 1);
     uniform_int_distribution<int> distsel(0, 1);
 
     int maxDisturbanceNum = 262144;
@@ -166,11 +164,9 @@ void speedTest(Net& net)
         if (distsel(rng) == 0)
         {
             input1.at<float>(distidxX(rng), distidxY(rng)) = dist3(rng) * 1e5;
-            input1.at<float>(distidxX(rng), distidxY(rng)) = dist3(rng) * 1e5;
         }
         else
         {
-            input2.at<float>(distidxX(rng), distidxY(rng)) = dist3(rng) * 1e5;
             input2.at<float>(distidxX(rng), distidxY(rng)) = dist3(rng) * 1e5;
         }
     }
@@ -182,18 +178,21 @@ void speedTest(Net& net)
 
 // Set up capturing API
 #if __has_include("renderdoc_app.h")
+
 #define RENDERDOC_ENABLED 1
 #include <renderdoc_app.h>
+
 #if defined(WIN32)
 #include <Windows.h>
 #include <windef.h>
 #include <libloaderapi.h>
+
 #elif defined(__linux__) || defined(__FreeBSD__)
 #include <dlfcn.h>
-#endif
+#endif  /* PLATFORM */
 
 RENDERDOC_API_1_6_0* rdoc_api = NULL;
-#endif
+#endif /* RENDERDOC_ENABLED */
 
 int main() {
 #ifdef RENDERDOC_ENABLED
@@ -213,29 +212,23 @@ int main() {
     }
 #else
 #error "Unknown platform"
-#endif
-#endif
+#endif /* PLATFORM */
+#endif /* RENDERDOC_ENABLED */
+
 #ifdef RENDERDOC_ENABLED
-    cout << "\033[92m" << "RenderDoc library is present." << "\033[0m\n";
     cout << "\033[92m" << "RenderDoc library is present." << "\033[0m\n";
 #else
     cout << "\033[91m" << "RenderDoc libray is not present. Capturing shader execution is not possible." << "\033[0m\n";
 #endif
+
 #ifdef RENDERDOC_ENABLED
     cout << "\033[93m" << "RenderDoc API loaded: " << "\033[0m";
     if (rdoc_api)
         cout << "\033[92m" << "TRUE" << "\033[0m\n";
     else
         cout << "\033[91m" << "FALSE" << "\033[0m\n";
-    cout << "\033[91m" << "RenderDoc libray is not present. Capturing shader execution is not possible." << "\033[0m\n";
-#endif
-#ifdef RENDERDOC_ENABLED
-    cout << "\033[93m" << "RenderDoc API loaded: " << "\033[0m";
-    if (rdoc_api)
-        cout << "\033[92m" << "TRUE" << "\033[0m\n";
-    else
-        cout << "\033[91m" << "FALSE" << "\033[0m\n";
-#endif
+#endif /* RENDERDOC_ENABLED */
+
     cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_DEBUG);
 
     // Create the actual net object
@@ -251,18 +244,18 @@ int main() {
 
 #ifdef RENDERDOC_ENABLED
     if (rdoc_api) rdoc_api->StartFrameCapture(NULL, NULL);
-#endif
+#endif /* RENDERDOC_ENABLED */
 
     // ============= BEGIN OF EXECUTION ===============
+    
     //validityTest(net);
-
     speedTest(net);
 
     // ============= END OF EXECUTION ===============
 
 #ifdef RENDERDOC_ENABLED
     if (rdoc_api) rdoc_api->EndFrameCapture(NULL, NULL);
-#endif
+#endif /* RENDERDOC_ENABLED */
 
     //cout << "Press any key to continue...";
     //getchar();
