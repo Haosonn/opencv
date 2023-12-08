@@ -4,13 +4,14 @@
 #include <iostream>
 #include <chrono>
 #include <random>
-using namespace std;
-using namespace cv;
 
-void printNetInfo(dnn::Net net) {
+using std::vector, std::cout, std::endl, std::getchar;
+using cv::dnn::Net, cv::Mat, cv::String;
+
+void printNetInfo(Net net) {
     vector<String> layerNames = net.getLayerNames();
     cout << "Input: " << net.getLayer(0)->name << endl;
-    for (auto i : layerNames) {
+    for (auto& i : layerNames) {
         int id = net.getLayerId(i);
         cout << "layer name: " << i << ", id=" << id << endl;
         auto v = net.getLayerInputs(id);
@@ -59,7 +60,7 @@ void printMat(const cv::Mat& mat) {
 }
 
 
-void cal(Mat& input1, Mat& input2, Mat& output, dnn::Net& net) {
+void cal(Mat& input1, Mat& input2, Mat& output, Net& net) {
     net.setInput(input1, "input1");
     net.setInput(input2, "input2");
 
@@ -73,19 +74,19 @@ void cal(Mat& input1, Mat& input2, Mat& output, dnn::Net& net) {
     cout << "\033[93mTime elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\033[0m\n";
 }
 
-Mat testSingle(Mat& input1, Mat& input2, dnn::Net& net, bool useVK, bool print = false, bool useInternelPrint = true)
+Mat testSingle(Mat& input1, Mat& input2, Net& net, bool useVK, bool print = false, bool useInternelPrint = true)
 {
     Mat output;
     if (useVK)
     {
-        net.setPreferableBackend(dnn::DNN_BACKEND_VKCOM);
-        net.setPreferableTarget(dnn::DNN_TARGET_VULKAN);
+        net.setPreferableBackend(cv::dnn::DNN_BACKEND_VKCOM);
+        net.setPreferableTarget(cv::dnn::DNN_TARGET_VULKAN);
         cout << "\033[95mUsing Vulkan.\033[0m\n";
     }
     else
     {
-        net.setPreferableBackend(dnn::DNN_BACKEND_OPENCV);
-        net.setPreferableTarget(dnn::DNN_TARGET_CPU);
+        net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
         cout << "\033[95mUsing CPU.\033[0m\n";
     }
 
@@ -127,7 +128,7 @@ void verifyResult(Mat& mat1, Mat& mat2)
     cout << "\033[92mResults passed verification.\033[0m\n";
 }
 
-void validityTest(dnn::Net& net)
+void validityTest(Net& net)
 {
     Mat input1, input2;
 
@@ -141,8 +142,9 @@ void validityTest(dnn::Net& net)
     verifyResult(output1, output2);
 }
 
-void speedTest(dnn::Net& net)
+void speedTest(Net& net)
 {
+    using std::mt19937, std::uniform_real_distribution, std::uniform_int_distribution;
     Mat input1, input2;
 
     int matDimH = 4096, matDimW = 4096;
@@ -150,7 +152,7 @@ void speedTest(dnn::Net& net)
     input2 = Mat::ones(matDimH, matDimW, CV_32F);
     mt19937 rng;
     uniform_real_distribution<float> dist3;
-    uniform_int_distribution<int> distidx(0, 4096 - 1);
+    uniform_int_distribution<int> distidx(0, matDimH - 1);
     uniform_int_distribution<int> distsel(0, 1);
 
     for (int i = 0; i < 16384; ++i)
@@ -170,12 +172,51 @@ void speedTest(dnn::Net& net)
     verifyResult(output1, output2);
 }
 
+// Set up capturing API
+#if __has_include("renderdoc_app.h")
+#define RENDERDOC_ENABLED 1
+#include <renderdoc_app.h>
+#if defined(WIN32)
+#include <Windows.h>
+#include <windef.h>
+#include <libloaderapi.h>
+#elif defined(__linux__) || defined(__FreeBSD__)
+#include <dlfcn.h>
+#endif
+
+RENDERDOC_API_1_6_0* rdoc_api = NULL;
+#endif
+
 int main() {
+#ifdef RENDERDOC_ENABLED
+#if defined(WIN32)
+    if (HMODULE mod = GetModuleHandleA("renderdoc.dll"))
+    {
+        pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+        int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&rdoc_api);
+        assert(ret == 1);
+    }
+#elif defined(__linux__) || defined(__FreeBSD__)
+    if (void* mod = dlopen("librenderdoc.so", RTLD_NOW | RTLD_NOLOAD))
+    {
+        pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
+        int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&rdoc_api);
+        assert(ret == 1);
+    }
+#else
+#error "Unknown platform"
+#endif
+#endif
+#ifdef RENDERDOC_ENABLED
+    cout << "\033[92m" << "RenderDoc enabled." << "\033[0m\n";
+#else
+    cout << "\033[91m" << "RenderDoc disabled. Capturing shader execution is not possible." << "\033[0m\n";
+#endif
     cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_DEBUG);
-    dnn::Net net = dnn::Net();
-    net.setPreferableBackend(dnn::DNN_BACKEND_VKCOM);
-    net.setPreferableTarget(dnn::DNN_TARGET_VULKAN);
-    dnn::LayerParams params = dnn::LayerParams();
+
+    // Create the actual net object
+    Net net = Net();
+    cv::dnn::LayerParams params = cv::dnn::LayerParams();
     params.name = "NaryEltwise";
     params.type = "NaryEltwise";
     params.set("operation", "add");
@@ -184,7 +225,20 @@ int main() {
     net.connect(0, 0, 1, 0);
     net.connect(0, 1, 1, 1);
 
+#ifdef RENDERDOC_ENABLED
+    if (rdoc_api) rdoc_api->StartFrameCapture(NULL, NULL);
+#endif
+
+    // ============= BEGIN OF EXECUTION ===============
     //validityTest(net);
+
     speedTest(net);
+
+    // ============= BEGIN OF EXECUTION ===============
+#ifdef RENDERDOC_ENABLED
+    if (rdoc_api) rdoc_api->EndFrameCapture(NULL, NULL);
+#endif
+    //cout << "Press any key to continue...";
+    //getchar();
     return 0;
 }

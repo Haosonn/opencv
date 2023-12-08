@@ -1,6 +1,6 @@
 #version 450
 // #extension GL_EXT_debug_printf : enable
-#define ALL_THREAD 256
+#define ALL_THREAD 1024
 #define STEP_SIZE 64
 
 layout(binding = 0) readonly buffer Input1{
@@ -31,6 +31,9 @@ layout(binding = 5) readonly buffer Step {
 
 /* local_size_x, local_size_y, local_size_z there defines the number of invocations 
    of this compute shader in the current work group. */
+// TODO: Check if this makes any sense
+// TODO: Check if it is required to fetch PhysicalDeviceLimit from Context
+// TODO: here we shall assume that maxGroupInvocation is 1024.
 layout(local_size_x = ALL_THREAD, local_size_y = 1, local_size_z = 1) in; // TODO: Check if this makes any sense
 
 const int AND = 0;
