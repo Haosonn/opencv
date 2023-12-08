@@ -8,7 +8,16 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # Use opencv debug version
 set(OpenCV_DIR "../../build")
 find_package(OpenCV REQUIRED)
-include_directories(${OpenCV_INCLUDE_DIRS} "C:\\Program Files\\RenderDoc")
+include_directories(${OpenCV_INCLUDE_DIRS})
+
+
+# set(RENDERDOC_PATH "C:\\Program Files\\RenderDoc")
+if (DEFINED RENDERDOC_PATH)
+  message("RENDERDOC_PATH is defined: ${RENDERDOC_PATH}")
+  include_directories(${RENDERDOC_PATH})
+else()
+  message(WARNING "RENDERDOC_PATH is not defined. Set this variable to enable RENDERDOC_PATH")
+endif()
 
 # Add opencv lib
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

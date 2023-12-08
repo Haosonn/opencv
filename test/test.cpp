@@ -187,7 +187,7 @@ void speedTest(Net& net)
 #include <windef.h>
 #include <libloaderapi.h>
 
-#elif defined(__linux__) || defined(__FreeBSD__)
+#elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
 #include <dlfcn.h>
 #endif  /* PLATFORM */
 
@@ -203,7 +203,7 @@ int main() {
         int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&rdoc_api);
         assert(ret == 1);
     }
-#elif defined(__linux__) || defined(__FreeBSD__)
+#elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
     if (void* mod = dlopen("librenderdoc.so", RTLD_NOW | RTLD_NOLOAD))
     {
         pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
@@ -218,7 +218,7 @@ int main() {
 #ifdef RENDERDOC_ENABLED
     cout << "\033[92m" << "RenderDoc library is present." << "\033[0m\n";
 #else
-    cout << "\033[91m" << "RenderDoc libray is not present. Capturing shader execution is not possible." << "\033[0m\n";
+    cout << "\033[91m" << "RenderDoc library is not present. Capturing shader execution is not possible." << "\033[0m\n";
 #endif
 
 #ifdef RENDERDOC_ENABLED
