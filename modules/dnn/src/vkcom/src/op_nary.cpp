@@ -189,8 +189,8 @@ bool OpNary::computeGroupCount()
     if (shaderType == kNaryShaderTypeBinary)
     {
         group_x_ = nplanes; // TODO(VK): Dispatch on direction x. Parallelism at plane level
-        group_y_ = N2;      // TODO(VK): Dispatch on direction y. 
-        group_z_ = 1;       // TODO(VK): Dispatch on direction z. Parallelism at ndims - 2
+        group_y_ = N2;      // TODO(VK): Dispatch on direction y. Parallelism at ndims - 2.
+        group_z_ = 1;       // TODO(VK): Dispatch on direction z.
     }
     else
     {
