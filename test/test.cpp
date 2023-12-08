@@ -154,17 +154,23 @@ void speedTest(Net& net)
     uniform_real_distribution<float> dist3;
     uniform_int_distribution<int> distidxX(0, matDimH - 1);
     uniform_int_distribution<int> distidxY(0, matDimW - 1);
+    uniform_int_distribution<int> distidxX(0, matDimH - 1);
+    uniform_int_distribution<int> distidxY(0, matDimW - 1);
     uniform_int_distribution<int> distsel(0, 1);
 
+    int maxDisturbanceNum = 262144;
+    for (int i = 0; i < maxDisturbanceNum; ++i)
     int maxDisturbanceNum = 262144;
     for (int i = 0; i < maxDisturbanceNum; ++i)
     {
         if (distsel(rng) == 0)
         {
             input1.at<float>(distidxX(rng), distidxY(rng)) = dist3(rng) * 1e5;
+            input1.at<float>(distidxX(rng), distidxY(rng)) = dist3(rng) * 1e5;
         }
         else
         {
+            input2.at<float>(distidxX(rng), distidxY(rng)) = dist3(rng) * 1e5;
             input2.at<float>(distidxX(rng), distidxY(rng)) = dist3(rng) * 1e5;
         }
     }
@@ -211,7 +217,16 @@ int main() {
 #endif
 #ifdef RENDERDOC_ENABLED
     cout << "\033[92m" << "RenderDoc library is present." << "\033[0m\n";
+    cout << "\033[92m" << "RenderDoc library is present." << "\033[0m\n";
 #else
+    cout << "\033[91m" << "RenderDoc libray is not present. Capturing shader execution is not possible." << "\033[0m\n";
+#endif
+#ifdef RENDERDOC_ENABLED
+    cout << "\033[93m" << "RenderDoc API loaded: " << "\033[0m";
+    if (rdoc_api)
+        cout << "\033[92m" << "TRUE" << "\033[0m\n";
+    else
+        cout << "\033[91m" << "FALSE" << "\033[0m\n";
     cout << "\033[91m" << "RenderDoc libray is not present. Capturing shader execution is not possible." << "\033[0m\n";
 #endif
 #ifdef RENDERDOC_ENABLED
