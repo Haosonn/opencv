@@ -81,7 +81,7 @@ void binary_add()
         idx = next_idx;
     }
 
-    int i2_offset = int(gl_WorkGroupID.z);
+    int i2_offset = int(gl_WorkGroupID.y);
     int i1_offset = int(gl_LocalInvocationID.x);
 
     ptr1 += i2_offset * matStep[2 * ndims - 2];
