@@ -189,9 +189,9 @@ bool OpNary::computeGroupCount()
     if (shaderType == kNaryShaderTypeBinary)
     {
         group_x_ = nplanes; // parallelism at plane level
-        // group_y_ = alignSize(N2, STEP_SIZE) / STEP_SIZE; // TODO(VK): Experimental batched opearations
+        // group_y_ = alignSize(N2, STEP_SIZE) / STEP_SIZE; // TODO(VK): Experimental batched opearation
         group_y_ = N2;
-        // group_z_ = alignSize(N1, STEP_SIZE) / STEP_SIZE; // TODO(VK): Experimental batched opearations
+        // group_z_ = alignSize(N1, STEP_SIZE) / STEP_SIZE; // TODO(VK): Experimental batched opearation
         group_z_ = 1;
     }
     else
