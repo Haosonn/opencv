@@ -97,7 +97,7 @@ void OpNary::firstForward()
 
 bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 {
-    std::vector<int32_t> param = {(int32_t)naryOpType, ninputs, max_ndims};
+    std::vector<int32_t> param = {(int32_t)naryOpType, max_ndims};
     std::vector<int32_t> paramSize = {(int32_t)param.size()};
     std::vector<int32_t> dimSizes = {(ninputs + 1) * max_ndims};
     std::vector<int32_t> actualSteps;
@@ -189,10 +189,10 @@ bool OpNary::computeGroupCount()
     if (shaderType == kNaryShaderTypeBinary)
     {
         group_x_ = nplanes; // parallelism at plane level
-        // group_y_ = alignSize(N2, STEP_SIZE) / STEP_SIZE; // TODO(VK): Experimental batched opearation
         group_y_ = N2;
-        // group_z_ = alignSize(N1, STEP_SIZE) / STEP_SIZE; // TODO(VK): Experimental batched opearation
         group_z_ = 1;
+        // group_y_ = alignSize(N2, STEP_SIZE) / STEP_SIZE; // TODO(VK): Experimental batched opearation
+        // group_z_ = alignSize(N1, STEP_SIZE) / STEP_SIZE; // TODO(VK): Experimental batched opearation
     }
     else
     {
