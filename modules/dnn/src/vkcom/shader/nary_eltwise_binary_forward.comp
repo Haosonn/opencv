@@ -1,7 +1,7 @@
 #version 450
 // #extension GL_EXT_debug_printf : enable
 #define ALL_THREAD 1024
-// #define ALL_THREAD 256
+// #define ALL_THREAD 256 // Experimental batched operation
 #define STEP_SIZE 65536
 
 layout(binding = 0) readonly buffer Input1{
@@ -109,7 +109,8 @@ void binary_add()
         }
     }
 
-    // Experimental Batched Operations
+    // Experimental Batched Operation
+    
     // int threadID = int(gl_LocalInvocationID.x);
     // int i2_offset = (int(gl_WorkGroupID.y)) * STEP_SIZE + threadID;
     // int i1_offset = (int(gl_WorkGroupID.z)) * STEP_SIZE;
