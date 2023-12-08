@@ -16,7 +16,7 @@ if (DEFINED RENDERDOC_PATH)
   message("RENDERDOC_PATH is defined: ${RENDERDOC_PATH}")
   include_directories(${RENDERDOC_PATH})
 else()
-  message(WARNING "RENDERDOC_PATH is not defined. Set this variable to enable RENDERDOC_PATH")
+  message(WARNING "RENDERDOC_PATH is not defined. Set this variable to enable renderdoc support.")
 endif()
 
 # Add opencv lib
