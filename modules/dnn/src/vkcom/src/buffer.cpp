@@ -52,11 +52,63 @@ bool Buffer::init(size_t size_in_bytes, const char* data)
 
     // TODO: Try to optimize the memory at discrete graphics card. For AMD and GPU discrete graphics card,
     //  we should use VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT.
+    uint32_t memoryTypeIndex_ = uint32_t(-1);
 
-    allocateInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits,
-                                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
-                                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                                                  );
+    if (kDeviceType == GPU_TYPE::GPU_TYPE_DISCRETE)
+    {
+
+    #define VK_BUFFER_MEMORY_ALLOC_TYPE_CHECK(...) \
+        memoryTypeIndex_ = findMemoryType(memoryRequirements.memoryTypeBits, __VA_ARGS__)
+    
+    #define VK_BUFFER_MEMORY_ALLOC_RETRY(type, ...)             \
+        do                                                      \
+        {                                                       \
+            if (memoryTypeIndex_ == uint32_t(-1))               \
+            {                                                   \
+                fallbackType = type;                            \
+                VK_BUFFER_MEMORY_ALLOC_TYPE_CHECK(__VA_ARGS__); \
+            }                                                   \
+        } while (0)                                             \
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceMemoryProperties.html
+        int fallbackType = 0;
+        VK_BUFFER_MEMORY_ALLOC_RETRY(0,
+                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                     VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
+                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                                     );
+        VK_BUFFER_MEMORY_ALLOC_RETRY(1,
+                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                     VK_MEMORY_PROPERTY_HOST_CACHED_BIT
+                                     );
+        VK_BUFFER_MEMORY_ALLOC_RETRY(2,
+                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                     VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
+                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                                     );
+        VK_BUFFER_MEMORY_ALLOC_RETRY(3,
+                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                                     );
+        VK_BUFFER_MEMORY_ALLOC_RETRY(4,
+                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                                     );
+        if (fallbackType != 0)
+        {
+            CV_LOG_DEBUG(NULL, "memory allocation fallback occurred. Type "<< fallbackType << ". ");
+        }
+    }
+    else
+    {
+        memoryTypeIndex_ = findMemoryType(memoryRequirements.memoryTypeBits,
+                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT
+                                          );
+    }
+    allocateInfo.memoryTypeIndex = memoryTypeIndex_;
     VK_CHECK_RESULT(vkAllocateMemory(kDevice, &allocateInfo, NULL, &memory_));
 
     if (data)

@@ -34,6 +34,7 @@ namespace cv { namespace dnn { namespace vkcom {
 // Global Variable
 VkQueue kQueue = VK_NULL_HANDLE;
 VkDevice kDevice = VK_NULL_HANDLE; // It was used almost everywhere.
+GPU_TYPE kDeviceType = GPU_TYPE::GPU_TYPE_NOFOUND;
 VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
 cv::Mutex kContextMtx;
 Ptr<CommandPool> cmdPoolPtr;
@@ -434,7 +435,7 @@ Context::Context()
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
     VK_CHECK_RESULT(vkCreateDevice(kPhysicalDevice, &deviceCreateInfo, NULL, &kDevice));
-
+    kDeviceType = gpuInfoList[bestGPUIndex].type;
     // Get a handle to the only member of the queue family.
     vkGetDeviceQueue(kDevice, kQueueFamilyIndex, 0, &kQueue);
 
