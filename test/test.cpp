@@ -257,8 +257,8 @@ RENDERDOC_API_1_6_0* rdoc_api = NULL;
 int main() {
 
 #ifdef WITH_CUDA
-   testCuda();
-   return 0;
+//    testCuda();
+//    return 0;
 #endif
 
 
