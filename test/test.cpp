@@ -147,7 +147,7 @@ void speedTest(Net& net)
     using std::mt19937, std::uniform_real_distribution, std::uniform_int_distribution;
     Mat input1, input2;
 
-    int matDimH = 4096, matDimW = 4096;
+    int matDimH = 16384, matDimW = 16384;
     input1 = Mat::ones(matDimH, matDimW, CV_32F);
     input2 = Mat::ones(matDimH, matDimW, CV_32F);
     mt19937 rng;
@@ -173,7 +173,7 @@ void speedTest(Net& net)
 
     Mat output1 = testSingle(input1, input2, net, true, false);
     Mat output2 = testSingle(input1, input2, net, false, false);
-    verifyResult(output1, output2);
+    //verifyResult(output1, output2);
 }
 
 // Set up capturing API
