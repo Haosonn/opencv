@@ -71,6 +71,7 @@ bool Buffer::init(size_t size_in_bytes, const char* data)
         } while (0)                                             \
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceMemoryProperties.html
         int fallbackType = 0;
+        // test if there is any device local memory
         VK_BUFFER_MEMORY_ALLOC_RETRY(0,
                                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -82,11 +83,13 @@ bool Buffer::init(size_t size_in_bytes, const char* data)
                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                      VK_MEMORY_PROPERTY_HOST_CACHED_BIT
                                      );
+        // otherwise try host cached memory
         VK_BUFFER_MEMORY_ALLOC_RETRY(2,
                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                      VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
                                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
                                      );
+        // TODO: for computations involving large matrices, try use DEVICE_LOCAL first.
         VK_BUFFER_MEMORY_ALLOC_RETRY(3,
                                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
