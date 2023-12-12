@@ -18,6 +18,13 @@ else()
   include_directories(${RENDERDOC_PATH})
 endif()
 
+if (NOT OpenCV_CUDA_VERSION)
+    message(STATUS "OpenCV was not built with CUDA.")
+else()
+    message(STATUS "OpenCV was built with CUDA.")
+    add_definitions(-DWITH_CUDA)
+endif()
+
 # Add opencv lib
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})

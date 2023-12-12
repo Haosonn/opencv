@@ -615,7 +615,24 @@ GPUInfo Context::parseGPUInfo(VkPhysicalDevice& kPhysicalDevice)
     }
 
     // cache memory properties
+
+    //TODO(VK): delete this
     vkGetPhysicalDeviceMemoryProperties(kPhysicalDevice, &info.physicalDeviceMemoryProperties);
+    CV_LOG_DEBUG(NULL, "memoryTypeCount = "<<info.physicalDeviceMemoryProperties.memoryTypeCount<<".");
+    CV_LOG_DEBUG(NULL, "memoryHeapCount = "<<info.physicalDeviceMemoryProperties.memoryHeapCount<<".");
+    for (uint32_t i = 0; i < info.physicalDeviceMemoryProperties.memoryTypeCount; i++)
+    {
+        const VkMemoryType& memoryType = info.physicalDeviceMemoryProperties.memoryTypes[i];
+        CV_LOG_DEBUG(NULL, "memoryType["<<i<<"] flags = "<<memoryType.propertyFlags<<".");
+        CV_LOG_DEBUG(NULL, "memoryType["<<i<<"] heapIndex = "<<memoryType.heapIndex<<".");
+    }
+    for (uint32_t i = 0; i < info.physicalDeviceMemoryProperties.memoryHeapCount; i++)
+    {
+        const VkMemoryHeap& memoryHeap = info.physicalDeviceMemoryProperties.memoryHeaps[i];
+        CV_LOG_DEBUG(NULL, "memoryHeap["<<i<<"] size = "<<memoryHeap.size<<".");
+        CV_LOG_DEBUG(NULL, "memoryHeap["<<i<<"] flags = "<<memoryHeap.flags<<".");
+    }
+
 
     // get device extension
     uint32_t deviceExtensionPropertyCount = 0;

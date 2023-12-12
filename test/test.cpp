@@ -74,7 +74,7 @@ void cal(Mat& input1, Mat& input2, Mat& output, Net& net) {
     cout << "\033[93mTime elapsed: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms\033[0m\n";
 }
 
-Mat testSingle(Mat& input1, Mat& input2, Net& net, bool useVK, bool print = false, bool useInternelPrint = true)
+Mat testSingle(Mat& input1, Mat& input2, Net& net, bool useVK, bool print = false, bool useCuda = false, bool useInternelPrint = true)
 {
     Mat output;
     if (useVK)
@@ -89,6 +89,13 @@ Mat testSingle(Mat& input1, Mat& input2, Net& net, bool useVK, bool print = fals
         net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
         cout << "\033[95mUsing CPU.\033[0m\n";
     }
+    if (useCuda)
+    {
+        net.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
+        net.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
+        cout << "\033[95mUsing CUDA.\033[0m\n";
+    }
+
 
     cal(input1, input2, output, net);
     if (print)
@@ -147,7 +154,7 @@ void speedTest(Net& net)
     using std::mt19937, std::uniform_real_distribution, std::uniform_int_distribution;
     Mat input1, input2;
 
-    int matDimH = 4096, matDimW = 4096;
+    int matDimH = 16384, matDimW = 16384;
     input1 = Mat::ones(matDimH, matDimW, CV_32F);
     input2 = Mat::ones(matDimH, matDimW, CV_32F);
     mt19937 rng;
@@ -176,6 +183,59 @@ void speedTest(Net& net)
     verifyResult(output1, output2);
 }
 
+
+#ifdef WITH_CUDA
+void testCuda() {
+    Net net = Net();
+    cv::dnn::LayerParams params = cv::dnn::LayerParams();
+    params.name = "Eltwise";
+    params.type = "Eltwise";
+    params.set("operation", "sum");
+    params.set("output_channels_mode", "input_0_truncate");
+    net.addLayer(params.name, params.type, params);
+    net.setInputsNames({ "input1", "input2" });
+    net.connect(0, 0, 1, 0);
+    net.connect(0, 1, 1, 1);
+    Mat input1, input2;
+
+    input1 = Mat::ones(8, 8, CV_32F);
+    input2 = Mat::ones(8, 1, CV_32F);
+    input1.at<float>(3, 2) = 25;
+    input2.at<float>(3, 0) = 17;
+    Mat output = testSingle(input1, input2, net, true, true, true);
+    return;
+
+
+
+    int matDimH = 16384, matDimW = 16384;
+    input1 = Mat::ones(matDimH, matDimW, CV_32F);
+    input2 = Mat::ones(matDimH, matDimW, CV_32F);
+    using std::mt19937, std::uniform_real_distribution, std::uniform_int_distribution;
+    mt19937 rng;
+    uniform_real_distribution<float> dist3;
+    uniform_int_distribution<int> distidxX(0, matDimH - 1);
+    uniform_int_distribution<int> distidxY(0, matDimW - 1);
+    uniform_int_distribution<int> distsel(0, 1);
+
+    int maxDisturbanceNum = 262144;
+    for (int i = 0; i < maxDisturbanceNum; ++i)
+        int maxDisturbanceNum = 262144;
+    for (int i = 0; i < maxDisturbanceNum; ++i)
+    {
+        if (distsel(rng) == 0)
+        {
+            input1.at<float>(distidxX(rng), distidxY(rng)) = dist3(rng) * 1e5;
+        }
+        else
+        {
+            input2.at<float>(distidxX(rng), distidxY(rng)) = dist3(rng) * 1e5;
+        }
+    }
+    testSingle(input1, input2, net, false, false, true);
+    testSingle(input1, input2, net, false, false, false);
+}
+#endif
+
 // Set up capturing API
 #if __has_include("renderdoc_app.h")
 
@@ -195,6 +255,13 @@ RENDERDOC_API_1_6_0* rdoc_api = NULL;
 #endif /* RENDERDOC_ENABLED */
 
 int main() {
+
+#ifdef WITH_CUDA
+   testCuda();
+   return 0;
+#endif
+
+
 #ifdef RENDERDOC_ENABLED
 #if defined(WIN32)
     if (HMODULE mod = GetModuleHandleA("renderdoc.dll"))
