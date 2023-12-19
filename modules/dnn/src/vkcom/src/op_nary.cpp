@@ -137,7 +137,7 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 
     // TODO: remove experimental time counter
     auto end = std::chrono::high_resolution_clock::now();
-    CV_LOG_DEBUG(NULL, "Time elapsed to writeTensor: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
+    CV_LOG_INFO(NULL, "Time elapsed to writeTensor: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
 
     // TODO: remove experimental time counter
     begin = std::chrono::high_resolution_clock::now();
@@ -150,7 +150,7 @@ bool OpNary::binaryForward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
 
     // TODO(VK): remove experimental time counter
     end = std::chrono::high_resolution_clock::now();
-    CV_LOG_DEBUG(NULL, "Time elapsed to compute binary forward: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
+    CV_LOG_INFO(NULL, "Time elapsed to compute binary forward: "<<(int)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" ms");
 
     return true;
 }

@@ -57,7 +57,7 @@ const int ADD = 17;
 const int DIV = 18;
 const int WHERE = 19;
 
-void binary_add()
+void binary_forward()
 {
     int ndims = params.ndims;
     int dp1 = matStep[2 * ndims - 1];
@@ -88,26 +88,44 @@ void binary_add()
     ptr2 += i2_offset * matStep[3 * ndims - 2];
     ptr += i2_offset * matStep[ndims - 2];
 
+/*
     if (dp1 == 1 && dp2 == 1 && dp == 1) {
         for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1] = matA[ptr1 + i1] + matB[ptr2 + i1];
+            perform_op(&matA + ptr1 + i1, &matB + ptr2 + i1, &matOut + ptr + i1);
         }
     } else if (dp1 == 1 && dp2 == 0 && dp == 1) {
         float k = matB[ptr2];
         for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1] = matA[ptr1 + i1] + k;
+            perform_op(&matA + ptr1 + i1, &matB + ptr2, &matOut + ptr + i1);
         }
     } else if (dp1 == 0 && dp2 == 1 && dp == 1) {
         float k = matA[ptr1];
         for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1] = k + matB[ptr2 + i1];
+            perform_op(&matA + ptr1, &matB + ptr2 + i1, &matOut + ptr + i1);
         }
     } else {
         for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
-            matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] + matB[ptr2 + i1 * dp2];
+            perform_op(&matA + ptr1 + i1 * dp1, &matB + ptr2 + i1 * dp2, &matOut + ptr + i1 * dp);
         }
     }
-
+*/
+    for (int i1 = i1_offset; i1 < n1; i1 += ALL_THREAD) {
+        switch (params.opType) {
+            case int(ADD):
+                matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] + matB[ptr2 + i1 * dp2];
+                break;
+            case int(SUB):
+                matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] - matB[ptr2 + i1 * dp2];
+                break;
+            case int(PROD):
+                matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] * matB[ptr2 + i1 * dp2];
+                break;
+            case int(DIV):
+                matOut[ptr + i1 * dp] = matA[ptr1 + i1 * dp1] / matB[ptr2 + i1 * dp2];
+                break;
+        }
+    }
+    
     // Experimental Batched Operation
     
     // int threadID = int(gl_LocalInvocationID.x);
@@ -159,11 +177,6 @@ void binary_add()
 void main()
 {
     // debugPrintfEXT("nary_eltwise_binary_forward.comp loaded\n");
-    switch (params.opType)
-    {
-        case int(ADD):
-            binary_add();
-            break;
-    }
+    binary_forward();
     return;
 }

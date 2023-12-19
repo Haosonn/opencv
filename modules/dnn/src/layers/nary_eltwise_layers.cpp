@@ -119,7 +119,7 @@ public:
 #ifdef HAVE_VULKAN
         if (backendId == DNN_BACKEND_VKCOM) //TODO(VK) remember to add implemented operations
             return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::SUB ||
-                   op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN;
+                   op == OPERATION::DIV ;
 #endif
 
         if (op == OPERATION::MAX || op == OPERATION::MIN || op == OPERATION::SUM ||
